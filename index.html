@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Project Manager</title>
+
+    <link rel="stylesheet" href="colorTheme.css">
+
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script src="program.js" defer></script>
+    <script src="tooltips.js" defer></script>
+
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e1e1e">
+
+    <link rel="icon" href="Logo-2.png" type="image/png">
+
+    <link rel="apple-touch-icon" href="Logo-1.png">
+
+
+</head>
+
+
+<!-- =========================
+     CREATE ITEM MODAL
+========================== -->
+
+<div class="create-modal" id="createModal">
+
+    <div class="create-dialog">
+
+        <header class="create-dialog-header">
+
+            <div class="create-dialog-title">
+
+                <div class="create-dialog-icon" id="createModalIcon">
+                    <i class="ph ph-file-plus"></i>
+                </div>
+
+                <div>
+
+                    <h2 id="createModalTitle">
+                        Add File
+                    </h2>
+
+                    <p id="createModalDescription">
+                        Create a new file.
+                    </p>
+
+                </div>
+
+            </div>
+
+            <button class="settings-close" id="closeCreateModalButton" title="Close">
+                <i class="ph ph-x"></i>
+            </button>
+
+        </header>
+
+
+        <div class="create-dialog-body">
+
+            <label class="create-input-label" for="createNameInput" id="createNameLabel">
+                File name
+            </label>
+
+            <input type="text" id="createNameInput" class="create-input" autocomplete="off" spellcheck="false">
+
+
+            <div id="projectSourceField" hidden>
+
+                <label class="create-input-label" for="projectSourceSelect">
+                    Project source
+                </label>
+
+                <select id="projectSourceSelect" class="create-input"></select>
+
+            </div>
+
+
+            <div class="create-error" id="createError" hidden></div>
+
+        </div>
+
+
+        <footer class="create-dialog-footer">
+
+            <button class="settings-close-button" id="cancelCreateButton">
+                Cancel
+            </button>
+
+            <button class="settings-save" id="confirmCreateButton">
+                <i class="ph ph-plus"></i>
+                <span id="confirmCreateText">
+                    Create File
+                </span>
+            </button>
+
+        </footer>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+<body>
+
+
+    <!-- =========================
+         TOOLBAR
+    ========================== -->
+
+    <header class="toolbar">
+
+        <div class="title">
+
+            <span class="title-text" data-tooltip="The best project manager">
+                Project Manager+
+            </span>
+
+        </div>
+
+
+
+
+
+        <div class="toolbar-spacer"></div>
+
+
+        <span class="toolbar-status" id="toolbarStatus" data-tooltip="Manage in settings">
+            No sources
+        </span>
+
+
+        <div class="toolbar-actions">
+
+
+
+
+            <button class="toolbar-icon-button" id="addFileButton" title="List view" data-tooltip="Add file">
+                <i class="ph ph-file-plus"></i>
+            </button>
+
+            <button class="toolbar-icon-button" id="filterButton" data-tooltip="Filter">
+                <i class="ph ph-funnel"></i>
+            </button>
+
+
+            <button class="toolbar-icon-button" id="addFolderButton" title="List view" data-tooltip="Add folder">
+                <i class="ph ph-folder-plus"></i>
+            </button>
+
+
+            <button class="toolbar-icon-button" id="newProjectButton" title="List view"
+                data-tooltip="Create new project">
+                <i class="ph ph-plus"></i>
+            </button>
+
+
+
+
+
+            <button class="toolbar-icon-button" id="viewModeButton" title="List view" data-tooltip="View type">
+                <i class="ph ph-list"></i>
+            </button>
+
+            <button class="toolbar-icon-button" id="refreshButton" title="Refresh projects"
+                data-tooltip="Refresh Projects">
+                <i class="ph ph-arrow-clockwise"></i>
+            </button>
+
+
+            <button class="toolbar-icon-button" id="settingsButton" title="Settings" data-tooltip="Settings">
+                <i class="ph ph-gear"></i>
+            </button>
+
+
+
+
+
+
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         APP
+    ========================== -->
+
+    <main class="app-shell">
+
+        <div class="chat-scroll" id="projectScroll">
+
+            <div class="messages" id="projectContainer">
+
+
+                <!-- Welcome / Empty State -->
+
+                <section class="welcome" id="welcome">
+
+                    <div class="welcome-icon">
+
+                        <i class="ph ph-folder-open"></i>
+
+                    </div>
+
+
+                    <h1>
+                        No sources
+                    </h1>
+
+
+                    <p>
+
+                        Add a source folder in Settings.
+
+                        Every folder directly inside a source
+                        will appear here as a project.
+
+                    </p>
+
+
+                    <button id="welcomeSettingsButton" style="margin-top: 20px">
+
+                        <i class="ph ph-gear"></i>
+
+                        Open Settings
+
+                    </button>
+
+                </section>
+
+                <!-- Projects are inserted here -->
+
+                <div id="projectGrid" hidden></div>
+
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================
+         STATUS BAR
+    ========================== -->
+
+    <footer class="status-bar">
+
+        <span id="statusText">
+            Ready
+        </span>
+
+
+        <span id="projectCount">
+            0 projects
+        </span>
+
+    </footer>
+
+
+    <!-- =========================
+         SETTINGS
+    ========================== -->
+
+    <div class="settings-modal" id="settingsModal">
+
+        <div class="settings-dialog">
+
+
+            <!-- Sidebar -->
+
+            <aside class="settings-sidebar">
+
+                <div class="settings-sidebar-title">
+
+                    Settings
+
+                </div>
+
+
+                <nav class="settings-nav">
+
+                    <button class="
+                            settings-nav-item
+                            active
+                        " data-page="sources">
+
+                        Sources
+
+                    </button>
+
+                </nav>
+
+            </aside>
+
+
+            <!-- Content -->
+
+            <section class="settings-content">
+
+
+                <header class="settings-content-header">
+
+                    <div>
+
+                        <h2 id="settingsPageTitle">
+
+                            Sources
+
+                        </h2>
+
+
+                        <p>
+
+                            Choose where your projects live.
+
+                        </p>
+
+                    </div>
+
+
+                    <button class="settings-close" id="closeSettingsButton" title="Close settings">
+
+                        <i class="ph ph-x"></i>
+
+                    </button>
+
+                </header>
+
+
+                <!-- Sources -->
+
+                <div class="
+                        settings-page
+                        active
+                    " id="sourcesPage">
+
+                    <section class="settings-section">
+
+
+                        <h3>
+                            Project Sources
+                        </h3>
+
+
+                        <p class="
+                                settings-section-description
+                            ">
+
+                            A source is a folder containing
+                            project folders.
+
+                            Each folder directly inside a
+                            source is treated as an
+                            individual project.
+
+                        </p>
+
+
+                        <div id="sourcesContainer"></div>
+
+
+                        <div class="settings-footer">
+
+                            <span id="sourcesStatus">
+
+                                No sources added
+
+                            </span>
+
+
+                            <button class="settings-save" id="addSourceButton">
+
+                                <i class="
+                                        ph
+                                        ph-folder-plus
+                                    "></i>
+
+                                Add Source
+
+                            </button>
+
+                        </div>
+
+
+                    </section>
+
+                </div>
+
+
+            </section>
+
+        </div>
+
+    </div>
+
+
+</body>
+
+</html>
