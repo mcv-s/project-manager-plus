@@ -154,9 +154,113 @@
                 <i class="ph ph-file-plus"></i>
             </button>
 
-            <button class="toolbar-icon-button" id="filterButton" data-tooltip="Filter">
-                <i class="ph ph-funnel"></i>
-            </button>
+            <div class="filter-container">
+
+                <button class="toolbar-icon-button" id="filterButton" data-tooltip="Filter" aria-expanded="false">
+                    <i class="ph ph-funnel"></i>
+                </button>
+
+
+                <div class="filter-popup" id="filterPopup">
+
+                    <div class="filter-popup-header">
+                        <span>Filter & Sort</span>
+                    </div>
+
+
+                    <!-- SOURCES -->
+
+                    <div class="filter-section">
+
+                        <div class="filter-section-title">
+                            Sources
+                        </div>
+
+                        <div id="filterSources"></div>
+
+                    </div>
+
+
+                    <!-- SORT -->
+
+                    <div class="filter-section">
+
+                        <div class="filter-section-title">
+                            Sort by
+                        </div>
+
+
+                        <label class="filter-option">
+
+                            <input type="radio" name="projectSort" value="name">
+
+                            <span>Name</span>
+
+                        </label>
+
+
+                        <label class="filter-option">
+
+                            <input type="radio" name="projectSort" value="source">
+
+                            <span>Source</span>
+
+                        </label>
+
+
+                        <label class="filter-option">
+
+                            <input type="radio" name="projectSort" value="size">
+
+                            <span>Size</span>
+
+                        </label>
+
+
+                    </div>
+
+
+                    <!-- SORT DIRECTION -->
+
+                    <div class="filter-section">
+
+                        <div class="filter-section-title">
+                            Direction
+                        </div>
+
+
+                        <button class="filter-sort-direction" id="filterSortDirection" type="button">
+
+                            <i class="ph ph-sort-ascending"></i>
+
+                            <span>Ascending</span>
+
+                        </button>
+
+                    </div>
+
+
+                    <div class="filter-section">
+
+                        <div class="filter-section-title">
+                            Deprecated Projects
+                        </div>
+
+
+                        <label class="filter-option">
+                            <input type="checkbox" id="filterDeprecatedLast">
+
+                            <span>Put deprecated projects at bottom</span>
+                        </label>
+
+                    </div>
+
+
+
+
+                </div>
+
+            </div>
 
 
             <button class="toolbar-icon-button" id="addFolderButton" title="List view" data-tooltip="Add folder">

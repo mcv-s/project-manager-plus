@@ -1038,6 +1038,247 @@ body {
 
 
 
+/* =========================================================
+   FILTER POPUP
+========================================================= */
+
+.filter-container {
+    position: relative;
+}
+
+
+/* Popup */
+
+.filter-popup {
+    position: absolute;
+
+    top: calc(100% + 8px);
+    right: 0;
+
+    width: 250px;
+
+    padding: 10px;
+
+    background: var(--surface);
+    border: 1px solid var(--border);
+
+    border-radius: 10px;
+
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.25);
+
+    z-index: 500;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transform: translateY(-4px);
+
+    transition:
+        opacity 0.12s ease,
+        transform 0.12s ease,
+        visibility 0.12s ease;
+}
+
+
+.filter-popup.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+
+    transform: translateY(0);
+}
+
+
+/* Header */
+
+.filter-popup-header {
+    padding: 7px 8px 9px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    color: var(--text);
+}
+
+
+/* Sections */
+
+.filter-section {
+    padding: 8px 4px;
+
+    border-top: 1px solid var(--border);
+}
+
+
+.filter-section-title {
+    margin-bottom: 6px;
+    padding: 0 4px;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    color: var(--text-muted);
+
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+
+/* Options */
+
+.filter-option {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    width: 100%;
+
+    padding: 6px 7px;
+
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    font-size: 13px;
+
+    color: var(--text);
+}
+
+
+.filter-option:hover {
+    background: var(--hover);
+}
+
+
+.filter-option input {
+    margin: 0;
+
+    accent-color: var(--accent);
+}
+
+
+/* Sort direction */
+
+.filter-sort-direction {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    width: 100%;
+
+    padding: 7px;
+
+    border: 0;
+
+    border-radius: 6px;
+
+    background: transparent;
+
+    color: var(--text);
+
+    font: inherit;
+    font-size: 13px;
+
+    cursor: pointer;
+
+    text-align: left;
+}
+
+
+.filter-sort-direction:hover {
+    background: var(--hover);
+}
+
+
+.filter-sort-direction i {
+    font-size: 16px;
+}
+
+
+/* Source checkbox rows */
+
+.filter-source-option {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 6px 7px;
+
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    font-size: 13px;
+
+    color: var(--text);
+}
+
+
+.filter-source-option:hover {
+    background: var(--hover);
+}
+
+
+.filter-source-option input {
+    margin: 0;
+
+    accent-color: var(--accent);
+}
+
+
+.filter-source-icon {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+
+    font-size: 15px;
+}
+
+
+.filter-source-name {
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 [hidden] {
     display: none !important
 }

@@ -12,6 +12,11 @@ const projectCount = document.getElementById("projectCount");
 const welcome = document.getElementById("welcome");
 const projectGrid = document.getElementById("projectGrid");
 const viewModeButton = document.getElementById("viewModeButton");
+const filterButton = document.getElementById("filterButton");
+const filterPopup = document.getElementById("filterPopup");
+const filterSources = document.getElementById("filterSources");
+const filterSortDirection = document.getElementById("filterSortDirection");
+const filterDeprecatedLast = document.getElementById("filterDeprecatedLast");
 
 
 
@@ -35,6 +40,41 @@ let currentDirectoryName = "";
 let directoryHistory = [];
 
 let createMode = null;
+
+
+
+
+
+
+
+let deprecatedLast =
+    localStorage.getItem(
+        "deprecatedLast"
+    ) === "true";
+
+
+let projectFilterSources =
+    JSON.parse(
+        localStorage.getItem(
+            "projectFilterSources"
+        ) || "null"
+    );
+
+let projectSort =
+    localStorage.getItem(
+        "projectSort"
+    ) || "name";
+
+let projectSortAscending =
+    localStorage.getItem(
+        "projectSortAscending"
+    ) !== "false";
+
+const projectSizes = new Map();
+
+
+filterDeprecatedLast.checked =
+    deprecatedLast;
 
 
 
@@ -663,88 +703,23 @@ async function ensureProjectConfig(
 }
 
 
-function getProjectIconClass(
-    icon
-) {
 
-    const icons = {
+function getProjectIconClass(icon) {
 
-        folder:
-            "ph-folder",
+    if (
+        typeof icon !== "string" ||
+        !icon.trim()
+    ) {
 
-        "folder-open":
-            "ph-folder-open",
+        return "ph-folder";
 
-        cloud:
-            "ph-cloud",
+    }
 
-        code:
-            "ph-code",
-
-        terminal:
-            "ph-terminal",
-
-        "file-code":
-            "ph-file-code",
-
-        globe:
-            "ph-globe",
-
-        game:
-            "ph-game-controller",
-
-        brain:
-            "ph-brain",
-
-        database:
-            "ph-database",
-
-        image:
-            "ph-image",
-
-        music:
-            "ph-music-notes",
-
-        video:
-            "ph-video-camera",
-
-        book:
-            "ph-book",
-
-        notebook:
-            "ph-notebook",
-
-        rocket:
-            "ph-rocket",
-
-        star:
-            "ph-star",
-
-        heart:
-            "ph-heart",
-
-        lightning:
-            "ph-lightning",
-
-        wrench:
-            "ph-wrench",
-
-        package:
-            "ph-package",
-
-        archive:
-            "ph-archive"
-
-    };
-
-
-    return (
-        icons[icon] ||
-        "ph-folder"
-    );
+    return icon.startsWith("ph-")
+        ? icon
+        : `ph-${icon}`;
 
 }
-
 
 
 
@@ -898,7 +873,7 @@ async function refreshProjects(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -1736,6 +1711,645 @@ function createFileSystemItem(
 
 
 
+
+/* =========================================================
+   FILTER / SORT
+========================================================= */
+
+function initializeProjectFilters() {
+
+    /*
+        If this is the first time using filters,
+        enable every source.
+    */
+
+    if (
+        !Array.isArray(
+            projectFilterSources
+        )
+    ) {
+
+        projectFilterSources =
+            sources.map(
+                source =>
+                    source.id
+            );
+
+    }
+
+
+    /*
+        Add newly-created sources automatically.
+    */
+
+    for (
+        const source of sources
+    ) {
+
+        if (
+            !projectFilterSources.includes(
+                source.id
+            )
+        ) {
+
+            projectFilterSources.push(
+                source.id
+            );
+
+        }
+
+    }
+
+
+    /*
+        Remove sources that no longer exist.
+    */
+
+    projectFilterSources =
+        projectFilterSources.filter(
+            id =>
+                sources.some(
+                    source =>
+                        source.id === id
+                )
+        );
+
+
+    saveProjectFilters();
+
+    renderFilterSources();
+
+    updateSortControls();
+
+}
+
+
+function saveProjectFilters() {
+
+    localStorage.setItem(
+        "projectFilterSources",
+        JSON.stringify(
+            projectFilterSources
+        )
+    );
+
+    localStorage.setItem(
+        "projectSort",
+        projectSort
+    );
+
+    localStorage.setItem(
+        "projectSortAscending",
+        projectSortAscending
+    );
+
+}
+
+
+function renderFilterSources() {
+
+    filterSources.innerHTML = "";
+
+
+    if (
+        sources.length === 0
+    ) {
+
+        const empty =
+            document.createElement(
+                "div"
+            );
+
+        empty.className =
+            "settings-description";
+
+        empty.textContent =
+            "No sources added.";
+
+        filterSources.appendChild(
+            empty
+        );
+
+        return;
+
+    }
+
+
+    for (
+        const source of sources
+    ) {
+
+        const label =
+            document.createElement(
+                "label"
+            );
+
+        label.className =
+            "filter-source-option";
+
+
+        const checkbox =
+            document.createElement(
+                "input"
+            );
+
+        checkbox.type =
+            "checkbox";
+
+        checkbox.checked =
+            projectFilterSources.includes(
+                source.id
+            );
+
+
+        checkbox.addEventListener(
+            "change",
+            () => {
+
+                if (
+                    checkbox.checked
+                ) {
+
+                    if (
+                        !projectFilterSources.includes(
+                            source.id
+                        )
+                    ) {
+
+                        projectFilterSources.push(
+                            source.id
+                        );
+
+                    }
+
+                }
+
+                else {
+
+                    projectFilterSources =
+                        projectFilterSources.filter(
+                            id =>
+                                id !== source.id
+                        );
+
+                }
+
+
+                saveProjectFilters();
+
+                renderProjectItems();
+
+            }
+        );
+
+
+        const icon =
+            document.createElement(
+                "span"
+            );
+
+        icon.className =
+            "filter-source-icon";
+
+        icon.style.color =
+            source.color ||
+            "#8b8b8b";
+
+        icon.innerHTML =
+            `<i class="ph ${source.icon ||
+            "ph-folder"
+            }"></i>`;
+
+
+        const name =
+            document.createElement(
+                "span"
+            );
+
+        name.className =
+            "filter-source-name";
+
+        name.textContent =
+            source.name;
+
+
+        label.append(
+            checkbox,
+            icon,
+            name
+        );
+
+        filterSources.appendChild(
+            label
+        );
+
+    }
+
+}
+
+
+function updateSortControls() {
+
+    const radio =
+        document.querySelector(
+            `input[name="projectSort"][value="${projectSort}"]`
+        );
+
+
+    if (radio) {
+
+        radio.checked =
+            true;
+
+    }
+
+
+    const icon =
+        filterSortDirection.querySelector(
+            "i"
+        );
+
+    const text =
+        filterSortDirection.querySelector(
+            "span"
+        );
+
+
+    if (
+        projectSortAscending
+    ) {
+
+        icon.className =
+            "ph ph-sort-ascending";
+
+        text.textContent =
+            "Ascending";
+
+    }
+
+    else {
+
+        icon.className =
+            "ph ph-sort-descending";
+
+        text.textContent =
+            "Descending";
+
+    }
+
+}
+
+
+async function getProjectSize(
+    project
+) {
+
+    if (
+        projectSizes.has(
+            project.id
+        )
+    ) {
+
+        return projectSizes.get(
+            project.id
+        );
+
+    }
+
+
+    let total =
+        0;
+
+
+    async function calculateDirectorySize(
+        directory
+    ) {
+
+        for await (
+            const [
+                name,
+                handle
+            ]
+            of directory.entries()
+        ) {
+
+            /*
+                Don't count the project manager
+                configuration file.
+            */
+
+            if (
+                name ===
+                PROJECT_CONFIG_FILENAME
+            ) {
+
+                continue;
+
+            }
+
+
+            if (
+                handle.kind ===
+                "file"
+            ) {
+
+                try {
+
+                    const file =
+                        await handle.getFile();
+
+                    total +=
+                        file.size;
+
+                }
+
+                catch (error) {
+
+                    console.warn(
+                        "Could not read file size:",
+                        name,
+                        error
+                    );
+
+                }
+
+            }
+
+            else if (
+                handle.kind ===
+                "directory"
+            ) {
+
+                await calculateDirectorySize(
+                    handle
+                );
+
+            }
+
+        }
+
+    }
+
+
+    try {
+
+        await calculateDirectorySize(
+            project.handle
+        );
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "Could not calculate project size:",
+            project.name,
+            error
+        );
+
+    }
+
+
+    projectSizes.set(
+        project.id,
+        total
+    );
+
+
+    return total;
+
+}
+
+
+function formatProjectSize(
+    bytes
+) {
+
+    if (
+        bytes < 1024
+    ) {
+
+        return `${bytes} B`;
+
+    }
+
+
+    if (
+        bytes < 1024 * 1024
+    ) {
+
+        return `${(
+            bytes / 1024
+        ).toFixed(1)} KB`;
+
+    }
+
+
+    if (
+        bytes < 1024 * 1024 * 1024
+    ) {
+
+        return `${(
+            bytes /
+            (1024 * 1024)
+        ).toFixed(1)} MB`;
+
+    }
+
+
+    return `${(
+        bytes /
+        (1024 * 1024 * 1024)
+    ).toFixed(1)} GB`;
+
+}
+
+
+async function sortProjects(
+    projectList
+) {
+
+    const sorted =
+        [...projectList];
+
+
+    if (
+        projectSort ===
+        "size"
+    ) {
+
+        /*
+            Size has to be calculated before
+            we can sort by it.
+        */
+
+        await Promise.all(
+            sorted.map(
+                project =>
+                    getProjectSize(
+                        project
+                    )
+            )
+        );
+
+    }
+
+
+    sorted.sort(
+        (
+            a,
+            b
+        ) => {
+
+            let comparison = 0;
+
+
+            if (
+                projectSort ===
+                "name"
+            ) {
+
+                comparison =
+                    a.name.localeCompare(
+                        b.name,
+                        undefined,
+                        {
+                            numeric: true,
+                            sensitivity: "base"
+                        }
+                    );
+
+            }
+
+
+            else if (
+                projectSort ===
+                "source"
+            ) {
+
+                comparison =
+                    a.sourceName.localeCompare(
+                        b.sourceName,
+                        undefined,
+                        {
+                            sensitivity: "base"
+                        }
+                    );
+
+
+                /*
+                    Projects within the same source
+                    are still sorted by name.
+                */
+
+                if (
+                    comparison === 0
+                ) {
+
+                    comparison =
+                        a.name.localeCompare(
+                            b.name,
+                            undefined,
+                            {
+                                numeric: true,
+                                sensitivity: "base"
+                            }
+                        );
+
+                }
+
+            }
+
+
+            else if (
+                projectSort ===
+                "size"
+            ) {
+
+                comparison =
+                    getProjectSizeValue(
+                        a
+                    ) -
+                    getProjectSizeValue(
+                        b
+                    );
+
+            }
+
+
+            return projectSortAscending
+                ? comparison
+                : -comparison;
+
+        }
+    );
+
+
+
+    if (deprecatedLast) {
+
+        sorted.sort(
+            (
+                a,
+                b
+            ) => {
+
+                const aDeprecated =
+                    a.config?.deprecated === true;
+
+                const bDeprecated =
+                    b.config?.deprecated === true;
+
+
+                if (
+                    aDeprecated ===
+                    bDeprecated
+                ) {
+
+                    return 0;
+
+                }
+
+
+                return aDeprecated
+                    ? 1
+                    : -1;
+
+            }
+        );
+
+    }
+
+
+
+
+
+    return sorted;
+
+}
+
+
+function getProjectSizeValue(
+    project
+) {
+
+    return (
+        projectSizes.get(
+            project.id
+        ) || 0
+    );
+
+}
+
+
+
+
+
+
+
+
+
+
 function getProjectSource(project) {
 
     return sources.find(
@@ -1747,17 +2361,56 @@ function getProjectSource(project) {
 
 
 
-
-function renderProjectItems() {
+async function renderProjectItems() {
 
     projectGrid.innerHTML = "";
 
+
+    /*
+        Only show projects whose source
+        is currently enabled.
+    */
+
+    const filteredProjects =
+        projects.filter(
+            project =>
+                projectFilterSources.includes(
+                    project.sourceId
+                )
+        );
+
+
+    /*
+        Sort the filtered projects.
+    */
+
+    const sortedProjects =
+        await sortProjects(
+            filteredProjects
+        );
+
+
+    /*
+        The count should represent what
+        the user is actually seeing.
+    */
+
+    projectCount.textContent =
+        `${sortedProjects.length} ${sortedProjects.length === 1
+            ? "project"
+            : "projects"
+        }`;
+
+
     for (
-        const project of projects
+        const project of sortedProjects
     ) {
 
         const source =
-            getProjectSource(project);
+            getProjectSource(
+                project
+            );
+
 
         const projectElement =
             document.createElement(
@@ -1767,53 +2420,67 @@ function renderProjectItems() {
         projectElement.className =
             "project-item";
 
-
-
         const config =
             project.config ||
             createDefaultProjectConfig();
+
 
         const iconClass =
             getProjectIconClass(
                 config.icon
             );
 
+
         const iconColor =
             config.iconColor ||
             "var(--text)";
 
+        if (config.deprecated) {
+            projectElement.style.opacity = "0.5";
+        }
+
 
         projectElement.innerHTML =
             `
-            <div
-    class="project-item-icon"
-    style="color: ${escapeHtml(iconColor)}"
->
-    <i class="ph ${iconClass}"></i>
-</div>
+                <div
+                    class="project-item-icon"
+                    style="color: ${escapeHtml(iconColor)}"
+                >
+                    <i class="ph ${iconClass}"></i>
+                </div>
+
 
                 ${source
                 ? `
                             <div
                                 class="project-source-icon"
-                                style="color: ${source.color || "#8b8b8b"}"
-                                title="${escapeHtml(source.name)}"
+                                style="color: ${source.color ||
+                "#8b8b8b"
+                }"
+                                title="${escapeHtml(
+                    source.name
+                )}"
                             >
-                                <i class="ph ${source.icon || "ph-folder"
+                                <i class="ph ${source.icon ||
+                "ph-folder"
                 }"></i>
                             </div>
                         `
                 : ""
             }
 
+
                 <div class="project-item-content">
 
                     <div class="project-item-name">
-                        ${escapeHtml(project.name)}
+                        ${escapeHtml(
+                project.name
+            )}
                     </div>
 
                 </div>
             `;
+
 
         projectElement.addEventListener(
             "click",
@@ -1826,6 +2493,7 @@ function renderProjectItems() {
             }
         );
 
+
         projectGrid.appendChild(
             projectElement
         );
@@ -1833,7 +2501,6 @@ function renderProjectItems() {
     }
 
 }
-
 
 
 
@@ -2783,6 +3450,11 @@ function populateProjectSources() {
 ========================================================= */
 
 
+
+
+
+
+
 // View mode toggle
 
 
@@ -2799,6 +3471,25 @@ viewModeButton.addEventListener(
     }
 );
 
+
+
+
+filterDeprecatedLast.addEventListener(
+    "change",
+    async () => {
+
+        deprecatedLast =
+            filterDeprecatedLast.checked;
+
+        localStorage.setItem(
+            "deprecatedLast",
+            deprecatedLast
+        );
+
+        await renderProjectItems();
+
+    }
+);
 
 
 
@@ -2934,6 +3625,153 @@ createNameInput.addEventListener(
 
 
 
+
+/* =========================================================
+   FILTER
+========================================================= */
+
+filterButton.addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+        const isOpen =
+            filterPopup.classList.contains(
+                "open"
+            );
+
+
+        if (isOpen) {
+
+            closeFilterPopup();
+
+        }
+
+        else {
+
+            openFilterPopup();
+
+        }
+
+    }
+);
+
+
+function openFilterPopup() {
+
+    initializeProjectFilters();
+
+    filterPopup.classList.add(
+        "open"
+    );
+
+    filterButton.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+}
+
+
+function closeFilterPopup() {
+
+    filterPopup.classList.remove(
+        "open"
+    );
+
+    filterButton.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+}
+
+
+/*
+    Clicking anywhere else closes the popup.
+*/
+
+document.addEventListener(
+    "click",
+    event => {
+
+        if (
+            !event.target.closest(
+                ".filter-container"
+            )
+        ) {
+
+            closeFilterPopup();
+
+        }
+
+    }
+);
+
+
+/*
+    Sort selection.
+*/
+
+document
+    .querySelectorAll(
+        'input[name="projectSort"]'
+    )
+    .forEach(
+        radio => {
+
+            radio.addEventListener(
+                "change",
+                async () => {
+
+                    projectSort =
+                        radio.value;
+
+                    saveProjectFilters();
+
+                    await renderProjectItems();
+
+                }
+            );
+
+        }
+    );
+
+
+/*
+    Sort direction.
+*/
+
+filterSortDirection.addEventListener(
+    "click",
+    async () => {
+
+        projectSortAscending =
+            !projectSortAscending;
+
+        saveProjectFilters();
+
+        updateSortControls();
+
+        await renderProjectItems();
+
+    }
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 settingsButton.addEventListener(
     "click",
     openSettings
@@ -3056,15 +3894,15 @@ if (
     navigator.serviceWorker.register(
         "./service-worker.js"
     )
-    .catch(
-        error => {
+        .catch(
+            error => {
 
-            console.error(
-                "Service worker registration failed:",
-                error
-            );
+                console.error(
+                    "Service worker registration failed:",
+                    error
+                );
 
-        }
-    );
+            }
+        );
 
 }
