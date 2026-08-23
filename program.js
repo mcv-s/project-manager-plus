@@ -2701,7 +2701,7 @@ async function renderProjectItems() {
             "var(--text)";
 
         if (config.deprecated) {
-            projectElement.style.opacity = "0.5";
+            projectElement.style.opacity = "0.25";
         }
 
 
@@ -2712,7 +2712,7 @@ async function renderProjectItems() {
                     style="color: ${escapeHtml(iconColor)}"
                 >
                     <i class="ph ${iconClass} project-icon"></i>
-                    <i class="ph ph-pencil project-edit-icon"></i>
+                    <i class="ph ph-dots-three project-edit-icon"></i>
                 </div>
 
 
