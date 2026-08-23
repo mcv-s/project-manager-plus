@@ -1676,6 +1676,19 @@ body {
 
 
 
+.active-projects-separator {
+
+    height:
+        1rem;
+
+    grid-column:
+        1 / -1;
+
+}
+
+
+
+
 
 
 

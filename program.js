@@ -12,11 +12,20 @@ const projectCount = document.getElementById("projectCount");
 const welcome = document.getElementById("welcome");
 const projectGrid = document.getElementById("projectGrid");
 const viewModeButton = document.getElementById("viewModeButton");
+
+
 const filterButton = document.getElementById("filterButton");
 const filterPopup = document.getElementById("filterPopup");
 const filterSources = document.getElementById("filterSources");
 const filterSortDirection = document.getElementById("filterSortDirection");
+
+const elevateActiveProjectsCheckbox = document.getElementById("elevateActiveProjects");
+const hideFinishedProjectsCheckbox = document.getElementById("hideFinishedProjects");
+
 const filterDeprecatedLast = document.getElementById("filterDeprecatedLast");
+
+
+
 
 const projectEditModal = document.getElementById("projectEditModal");
 const closeProjectEditModalButton = document.getElementById("closeProjectEditModal");
@@ -26,11 +35,10 @@ const projectEditName = document.getElementById("projectEditName");
 const projectEditIcon = document.getElementById("projectEditIcon");
 const projectEditIconColor = document.getElementById("projectEditIconColor");
 const projectEditDeprecated = document.getElementById("projectEditDeprecated");
+const projectEditState = document.getElementById("projectEditState");
 
 const exportSourcesButton = document.getElementById("saveSourcesButton");
 const importSourcesButton = document.getElementById("loadSourcesButton");
-
-
 
 
 /* =========================================================
@@ -96,10 +104,70 @@ let projectSortAscending =
 const projectSizes = new Map();
 
 
+
+
+
 filterDeprecatedLast.checked =
     deprecatedLast;
 
 
+
+
+
+
+
+
+// More state loading projects
+let elevateActiveProjects =
+    localStorage.getItem(
+        "elevateActiveProjects"
+    ) === "true";
+
+let hideFinishedProjects =
+    localStorage.getItem(
+        "hideFinishedProjects"
+    ) === "true";
+
+
+elevateActiveProjectsCheckbox.checked =
+    elevateActiveProjects;
+
+hideFinishedProjectsCheckbox.checked =
+    hideFinishedProjects;
+
+
+elevateActiveProjectsCheckbox.addEventListener(
+    "change",
+    () => {
+
+        elevateActiveProjects =
+            elevateActiveProjectsCheckbox.checked;
+
+        localStorage.setItem(
+            "elevateActiveProjects",
+            elevateActiveProjects
+        );
+
+        renderProjectItems();
+    }
+);
+
+
+hideFinishedProjectsCheckbox.addEventListener(
+    "change",
+    () => {
+
+        hideFinishedProjects =
+            hideFinishedProjectsCheckbox.checked;
+
+        localStorage.setItem(
+            "hideFinishedProjects",
+            hideFinishedProjects
+        );
+
+        renderProjectItems();
+    }
+);
 
 
 
@@ -157,6 +225,9 @@ function openProjectEditModal(project) {
     projectEditIcon.value =
         icon;
 
+    projectEditState.value =
+        config.state || "";
+
 
     /*
         If an old/custom icon isn't in the
@@ -168,7 +239,7 @@ function openProjectEditModal(project) {
 
     projectEditIconColor.value =
         config.iconColor ||
-        "#808080";
+        "#000001";
 
 
     projectEditDeprecated.checked =
@@ -216,10 +287,15 @@ async function saveProjectEdit() {
             projectEditIcon.value,
 
         iconColor:
-            projectEditIconColor.value,
+            projectEditIconColor.value === "#000001"
+                ? null
+                : projectEditIconColor.value,
 
         deprecated:
-            projectEditDeprecated.checked
+            projectEditDeprecated.checked,
+
+        state:
+            projectEditState.value
 
     };
 
@@ -325,6 +401,8 @@ projectEditModal.addEventListener(
 
 
 
+
+
 /* =========================================================
    PROJECT CONFIG
 ========================================================= */
@@ -336,8 +414,10 @@ const DEFAULT_PROJECT_CONFIG = {
     version: 1,
     icon: "folder",
     iconColor: "",
-    deprecated: false
+    deprecated: false,
+    state: ""
 };
+
 
 
 function createDefaultProjectConfig() {
@@ -365,12 +445,17 @@ function normalizeProjectConfig(config) {
         iconColor:
             typeof config?.iconColor === "string"
                 ? config.iconColor
-                : "#808080",
+                : "",
 
         deprecated:
             typeof config?.deprecated === "boolean"
                 ? config.deprecated
-                : false
+                : false,
+
+        state:
+            typeof config?.state === "string"
+                ? config.state
+                : null
     };
 
 }
@@ -2427,15 +2512,31 @@ function formatProjectSize(
 
 
 
-
-
-
 async function sortProjects(
     projectList
 ) {
 
-    const sorted =
+    let sorted =
         [...projectList];
+
+
+    /*
+        Optionally hide projects
+        marked as finished.
+    */
+
+    if (
+        hideFinishedProjects
+    ) {
+
+        sorted =
+            sorted.filter(
+                project =>
+                    project.config?.state !==
+                    "finished"
+            );
+
+    }
 
 
     if (
@@ -2550,8 +2651,54 @@ async function sortProjects(
     );
 
 
+    /*
+        Move active projects to the
+        beginning while preserving
+        their existing sort order.
+    */
 
-    if (deprecatedLast) {
+    if (
+        elevateActiveProjects
+    ) {
+
+        sorted.sort(
+            (
+                a,
+                b
+            ) => {
+
+                const aActive =
+                    a.config?.state ===
+                    "active";
+
+                const bActive =
+                    b.config?.state ===
+                    "active";
+
+
+                if (
+                    aActive ===
+                    bActive
+                ) {
+
+                    return 0;
+
+                }
+
+
+                return aActive
+                    ? -1
+                    : 1;
+
+            }
+        );
+
+    }
+
+
+    if (
+        deprecatedLast
+    ) {
 
         sorted.sort(
             (
@@ -2560,10 +2707,12 @@ async function sortProjects(
             ) => {
 
                 const aDeprecated =
-                    a.config?.deprecated === true;
+                    a.config?.deprecated ===
+                    true;
 
                 const bDeprecated =
-                    b.config?.deprecated === true;
+                    b.config?.deprecated ===
+                    true;
 
 
                 if (
@@ -2586,12 +2735,10 @@ async function sortProjects(
     }
 
 
-
-
-
     return sorted;
 
 }
+
 
 
 function getProjectSizeValue(
@@ -2626,7 +2773,14 @@ function getProjectSource(project) {
 
 
 
+
+
+
+
+
+
 async function renderProjectItems() {
+    sortProjects();
 
     projectGrid.innerHTML = "";
 
@@ -2667,9 +2821,46 @@ async function renderProjectItems() {
         }`;
 
 
+    let previousProjectWasActive =
+        false;
+
+
     for (
         const project of sortedProjects
     ) {
+
+        const isActive =
+            project.config?.state ===
+            "active";
+
+
+        /*
+            Add a visual separator when
+            transitioning from active
+            projects to other projects.
+        */
+
+        if (
+            elevateActiveProjects &&
+            previousProjectWasActive &&
+            !isActive
+        ) {
+
+            const separator =
+                document.createElement(
+                    "div"
+                );
+
+            separator.className =
+                "active-projects-separator";
+
+
+            projectGrid.appendChild(
+                separator
+            );
+
+        }
+
 
         const source =
             getProjectSource(
@@ -2684,6 +2875,7 @@ async function renderProjectItems() {
 
         projectElement.className =
             "project-item";
+
 
         const config =
             project.config ||
@@ -2700,8 +2892,14 @@ async function renderProjectItems() {
             config.iconColor ||
             "var(--text)";
 
-        if (config.deprecated) {
-            projectElement.style.opacity = "0.25";
+
+        if (
+            config.deprecated
+        ) {
+
+            projectElement.style.opacity =
+                "0.25";
+
         }
 
 
@@ -2746,6 +2944,7 @@ async function renderProjectItems() {
 
                 </div>
             `;
+
 
         const editIcon =
             projectElement.querySelector(
@@ -2800,6 +2999,10 @@ async function renderProjectItems() {
         projectGrid.appendChild(
             projectElement
         );
+
+
+        previousProjectWasActive =
+            isActive;
 
     }
 
@@ -3489,10 +3692,9 @@ async function exportSources() {
 
 
     setStatus(
-        `Exported ${sources.length} ${
-            sources.length === 1
-                ? "source"
-                : "sources"
+        `Exported ${sources.length} ${sources.length === 1
+            ? "source"
+            : "sources"
         }`
     );
 
@@ -3577,9 +3779,9 @@ async function importSources() {
         if (
             !data ||
             data.type !==
-                "project-manager-sources" ||
+            "project-manager-sources" ||
             data.version !==
-                SOURCE_EXPORT_VERSION ||
+            SOURCE_EXPORT_VERSION ||
             !Array.isArray(
                 data.sources
             )
@@ -3622,7 +3824,7 @@ async function importSources() {
             if (
                 !exportedSource ||
                 typeof exportedSource.name !==
-                    "string"
+                "string"
             ) {
 
                 continue;
@@ -3735,10 +3937,9 @@ async function importSources() {
 
 
         setStatus(
-            `Imported ${importedSources.length} ${
-                importedSources.length === 1
-                    ? "source"
-                    : "sources"
+            `Imported ${importedSources.length} ${importedSources.length === 1
+                ? "source"
+                : "sources"
             }`
         );
 

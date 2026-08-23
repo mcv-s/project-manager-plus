@@ -145,6 +145,8 @@
 
         <div class="project-edit-body">
 
+
+
             <!-- Icon -->
             <div class="project-edit-field">
 
@@ -156,6 +158,8 @@
                     spellcheck="false">
 
             </div>
+
+
 
 
             <!-- Icon Color -->
@@ -171,7 +175,24 @@
             </div>
 
 
+
+
             <!-- Deprecated -->
+
+
+
+            <!-- State -->
+            <div class="project-edit-field">
+
+                <label for="projectEditState">
+                    State
+                </label>
+
+                <input id="projectEditState" class="create-input" type="text" placeholder="" autocomplete="off"
+                    spellcheck="false">
+
+            </div>
+
 
             <label class="project-edit-checkbox">
 
@@ -183,7 +204,14 @@
 
             </label>
 
+
+
+
+
+
         </div>
+
+
 
 
         <div class="project-edit-footer">
@@ -236,7 +264,7 @@
         <div class="toolbar-spacer"></div>
 
 
-        <span class="toolbar-status" id="toolbarStatus" data-tooltip="Manage in settings">
+        <span class="toolbar-status" id="toolbarStatus" data-tooltip="Manage sources in settings">
             No sources
         </span>
 
@@ -244,7 +272,10 @@
         <div class="toolbar-actions">
 
 
-
+            <button class="toolbar-icon-button" id="newProjectButton" title="New Project"
+                data-tooltip="Create new project">
+                <i class="ph ph-plus"></i>
+            </button>
 
             <button class="toolbar-icon-button" id="addFileButton" title="List view" data-tooltip="Add file">
                 <i class="ph ph-file-plus"></i>
@@ -336,6 +367,33 @@
                     </div>
 
 
+
+
+                    <div class="filter-section">
+
+                        <div class="filter-section-title">
+                            Project State
+                        </div>
+
+
+                        <label class="filter-option">
+                            <input type="checkbox" id="elevateActiveProjects">
+
+                            <span>Put projects with state "active" at the top</span>
+                        </label>
+
+
+                        <label class="filter-option">
+                            <input type="checkbox" id="hideFinishedProjects">
+
+                            <span>Hide projects with state "finished"</span>
+                        </label>
+
+                    </div>
+
+
+
+
                     <div class="filter-section">
 
                         <div class="filter-section-title">
@@ -359,15 +417,14 @@
             </div>
 
 
+
+
             <button class="toolbar-icon-button" id="addFolderButton" title="List view" data-tooltip="Add folder">
                 <i class="ph ph-folder-plus"></i>
             </button>
 
 
-            <button class="toolbar-icon-button" id="newProjectButton" title="List view"
-                data-tooltip="Create new project">
-                <i class="ph ph-plus"></i>
-            </button>
+
 
 
 
