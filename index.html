@@ -116,6 +116,102 @@
 
 
 
+
+
+
+
+
+<!-- =========================================================
+     PROJECT EDIT MODAL
+========================================================= -->
+
+<div id="projectEditModal" class="project-edit-modal">
+
+    <div class="project-edit-dialog">
+
+        <div class="project-edit-header">
+
+            <div>
+                <h2>Edit Project</h2>
+                <p id="projectEditName"></p>
+            </div>
+
+            <button id="closeProjectEditModal" class="settings-close" type="button">
+                <i class="ph ph-x"></i>
+            </button>
+
+        </div>
+
+
+        <div class="project-edit-body">
+
+            <!-- Icon -->
+            <div class="project-edit-field">
+
+                <label for="projectEditIcon">
+                    Icon
+                </label>
+
+                <input id="projectEditIcon" class="create-input" type="text" placeholder="folder" autocomplete="off"
+                    spellcheck="false">
+
+            </div>
+
+
+            <!-- Icon Color -->
+
+            <div class="project-edit-field">
+
+                <label for="projectEditIconColor">
+                    Icon Color
+                </label>
+
+                <input id="projectEditIconColor" class="project-edit-color" type="color">
+
+            </div>
+
+
+            <!-- Deprecated -->
+
+            <label class="project-edit-checkbox">
+
+                <input id="projectEditDeprecated" type="checkbox">
+
+                <span>
+                    Deprecated
+                </span>
+
+            </label>
+
+        </div>
+
+
+        <div class="project-edit-footer">
+
+            <button id="cancelProjectEdit" class="settings-close-button" type="button">
+                Cancel
+            </button>
+
+            <button id="saveProjectEdit" class="settings-save" type="button">
+                <i class="ph ph-check"></i>
+                Save
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
 <body>
 
 

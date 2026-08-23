@@ -18,11 +18,23 @@ const filterSources = document.getElementById("filterSources");
 const filterSortDirection = document.getElementById("filterSortDirection");
 const filterDeprecatedLast = document.getElementById("filterDeprecatedLast");
 
+const projectEditModal = document.getElementById("projectEditModal");
+const closeProjectEditModalButton = document.getElementById("closeProjectEditModal");
+const cancelProjectEditButton = document.getElementById("cancelProjectEdit");
+const saveProjectEditButton = document.getElementById("saveProjectEdit");
+const projectEditName = document.getElementById("projectEditName");
+const projectEditIcon = document.getElementById("projectEditIcon");
+const projectEditIconColor = document.getElementById("projectEditIconColor");
+const projectEditDeprecated = document.getElementById("projectEditDeprecated");
+
+
 
 
 /* =========================================================
    STATE
 ========================================================= */
+
+let editingProject = null;
 
 let sources = [];
 
@@ -53,6 +65,14 @@ let deprecatedLast =
     ) === "true";
 
 
+
+console.log(
+    "SAVED FILTERS:",
+    localStorage.getItem(
+        "projectFilterSources"
+    )
+);
+
 let projectFilterSources =
     JSON.parse(
         localStorage.getItem(
@@ -76,6 +96,228 @@ const projectSizes = new Map();
 filterDeprecatedLast.checked =
     deprecatedLast;
 
+
+
+
+
+
+
+
+
+
+
+
+/* =========================================================
+   PROJECT EDIT MODAL
+========================================================= */
+
+function openProjectEditModal(project) {
+
+    editingProject = project;
+
+    const config =
+        project.config ||
+        createDefaultProjectConfig();
+
+
+    projectEditName.textContent =
+        project.name;
+
+
+    /*
+        The config stores icon names like:
+
+            "folder"
+            "code"
+            "rocket"
+
+        The select uses those same values.
+    */
+
+    let icon =
+        config.icon || "folder";
+
+    /*
+        Support configs that may contain
+        "ph-folder" as well as "folder".
+    */
+
+    if (
+        icon.startsWith("ph-")
+    ) {
+
+        icon =
+            icon.substring(3);
+
+    }
+
+    projectEditIcon.value =
+        icon;
+
+
+    /*
+        If an old/custom icon isn't in the
+        select, fall back to folder.
+    */
+
+
+
+
+    projectEditIconColor.value =
+        config.iconColor ||
+        "#808080";
+
+
+    projectEditDeprecated.checked =
+        config.deprecated === true;
+
+
+    projectEditModal.classList.add(
+        "open"
+    );
+
+}
+
+
+function closeProjectEditModal() {
+
+    projectEditModal.classList.remove(
+        "open"
+    );
+
+    editingProject = null;
+
+}
+
+
+async function saveProjectEdit() {
+
+    if (
+        !editingProject
+    ) {
+
+        return;
+
+    }
+
+
+    const project =
+        editingProject;
+
+
+    const config = {
+
+        version: 1,
+
+        icon:
+            projectEditIcon.value,
+
+        iconColor:
+            projectEditIconColor.value,
+
+        deprecated:
+            projectEditDeprecated.checked
+
+    };
+
+
+    try {
+
+        const permission =
+            await project.handle.requestPermission(
+                {
+                    mode: "readwrite"
+                }
+            );
+
+
+        if (
+            permission !== "granted"
+        ) {
+
+            setStatus(
+                "Write permission was not granted."
+            );
+
+            return;
+
+        }
+
+
+        const savedConfig =
+            await writeProjectConfig(
+                project.handle,
+                config
+            );
+
+
+        project.config =
+            savedConfig;
+
+
+        closeProjectEditModal();
+
+
+        await renderProjectItems();
+
+
+        setStatus(
+            `Updated ${project.name}`
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Could not save project configuration:",
+            error
+        );
+
+        setStatus(
+            "Could not save project configuration."
+        );
+
+    }
+
+}
+
+
+closeProjectEditModalButton.addEventListener(
+    "click",
+    closeProjectEditModal
+);
+
+cancelProjectEditButton.addEventListener(
+    "click",
+    closeProjectEditModal
+);
+
+saveProjectEditButton.addEventListener(
+    "click",
+    saveProjectEdit
+);
+
+
+/*
+    Clicking the dark area outside the dialog
+    closes the modal.
+*/
+
+projectEditModal.addEventListener(
+    "click",
+    event => {
+
+        if (
+            event.target === projectEditModal
+        ) {
+
+            closeProjectEditModal();
+
+        }
+
+    }
+);
 
 
 
@@ -1856,10 +2098,23 @@ function renderFilterSources() {
         checkbox.type =
             "checkbox";
 
+        checkbox.dataset.sourceId =
+            source.id;
+
+        console.log(
+            source.id,
+            projectFilterSources,
+            projectFilterSources.includes(
+                source.id
+            )
+        );
+
         checkbox.checked =
             projectFilterSources.includes(
                 source.id
             );
+
+
 
 
         checkbox.addEventListener(
@@ -1998,6 +2253,9 @@ function updateSortControls() {
     }
 
 }
+
+
+
 
 
 async function getProjectSize(
@@ -2163,6 +2421,10 @@ function formatProjectSize(
     ).toFixed(1)} GB`;
 
 }
+
+
+
+
 
 
 async function sortProjects(
@@ -2442,11 +2704,12 @@ async function renderProjectItems() {
 
         projectElement.innerHTML =
             `
-                <div
+                <div 
                     class="project-item-icon"
                     style="color: ${escapeHtml(iconColor)}"
                 >
-                    <i class="ph ${iconClass}"></i>
+                    <i class="ph ${iconClass} project-icon"></i>
+                    <i class="ph ph-pencil project-edit-icon"></i>
                 </div>
 
 
@@ -2481,10 +2744,47 @@ async function renderProjectItems() {
                 </div>
             `;
 
+        const editIcon =
+            projectElement.querySelector(
+                ".project-edit-icon"
+            );
+
+
+        editIcon.addEventListener(
+            "click",
+            event => {
+
+                event.preventDefault();
+                event.stopPropagation();
+
+
+                openProjectEditModal(
+                    project
+                );
+
+            }
+        );
+
 
         projectElement.addEventListener(
             "click",
-            () => {
+            event => {
+
+                /*
+                    If the pencil was clicked,
+                    do not open the project.
+                */
+
+                if (
+                    event.target.closest(
+                        ".project-edit-icon"
+                    )
+                ) {
+
+                    return;
+
+                }
+
 
                 openProject(
                     project
@@ -3660,7 +3960,6 @@ filterButton.addEventListener(
 
 function openFilterPopup() {
 
-    initializeProjectFilters();
 
     filterPopup.classList.add(
         "open"
@@ -3686,6 +3985,13 @@ function closeFilterPopup() {
     );
 
 }
+
+
+
+
+
+
+
 
 
 /*
@@ -3858,6 +4164,7 @@ async function initialize() {
     renderSources();
 
 
+
     await refreshProjects();
 
     setProjectView(
@@ -3866,6 +4173,18 @@ async function initialize() {
 
 
     updateCreationButtons();
+
+
+    projectFilterSources =
+        JSON.parse(
+            localStorage.getItem(
+                "projectFilterSources"
+            ) || "[]"
+        );
+
+
+    renderFilterSources();
+
 
 
 
