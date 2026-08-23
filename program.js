@@ -27,6 +27,9 @@ const projectEditIcon = document.getElementById("projectEditIcon");
 const projectEditIconColor = document.getElementById("projectEditIconColor");
 const projectEditDeprecated = document.getElementById("projectEditDeprecated");
 
+const exportSourcesButton = document.getElementById("saveSourcesButton");
+const importSourcesButton = document.getElementById("loadSourcesButton");
+
 
 
 
@@ -3384,6 +3387,405 @@ function closeSettings() {
 
 
 
+
+
+/* =========================================================
+   SOURCE IMPORT / EXPORT
+========================================================= */
+
+const SOURCE_EXPORT_VERSION = 1;
+
+
+/* ---------------------------------------------------------
+   EXPORT SOURCES
+--------------------------------------------------------- */
+
+async function exportSources() {
+
+    if (sources.length === 0) {
+
+        setStatus("No sources to export");
+
+        return;
+
+    }
+
+
+    /*
+        FileSystemDirectoryHandle objects cannot be
+        serialized into JSON.
+
+        Therefore we export the portable configuration
+        for each source and leave the actual folder
+        handles out of the export.
+    */
+
+    const exportData = {
+
+        version: SOURCE_EXPORT_VERSION,
+
+        type: "project-manager-sources",
+
+        sources: sources.map(
+            source => ({
+
+                name:
+                    source.name,
+
+                icon:
+                    source.icon ||
+                    "ph-folder",
+
+                color:
+                    source.color ||
+                    "#8b8b8b"
+
+            })
+        )
+
+    };
+
+
+    const json = JSON.stringify(
+        exportData,
+        null,
+        4
+    );
+
+
+    const blob = new Blob(
+        [json],
+        {
+            type: "application/json"
+        }
+    );
+
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const link =
+        document.createElement("a");
+
+    link.href =
+        url;
+
+    link.download =
+        "project-manager-sources.json";
+
+    document.body.appendChild(
+        link
+    );
+
+    link.click();
+
+    link.remove();
+
+
+    URL.revokeObjectURL(
+        url
+    );
+
+
+    setStatus(
+        `Exported ${sources.length} ${
+            sources.length === 1
+                ? "source"
+                : "sources"
+        }`
+    );
+
+}
+
+
+/* ---------------------------------------------------------
+   IMPORT SOURCES
+--------------------------------------------------------- */
+
+async function importSources() {
+
+    try {
+
+        if (
+            typeof showOpenFilePicker !==
+            "function"
+        ) {
+
+            setStatus(
+                "File importing is not supported by this browser"
+            );
+
+            return;
+
+        }
+
+
+        const [
+            fileHandle
+        ] = await showOpenFilePicker({
+
+            multiple: false,
+
+            types: [
+
+                {
+                    description:
+                        "Project Manager Sources",
+
+                    accept: {
+
+                        "application/json":
+                            [".json"]
+
+                    }
+
+                }
+
+            ]
+
+        });
+
+
+        const file =
+            await fileHandle.getFile();
+
+
+        const text =
+            await file.text();
+
+
+        let data;
+
+        try {
+
+            data =
+                JSON.parse(text);
+
+        }
+        catch (error) {
+
+            alert(
+                "The selected file is not valid JSON."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !data ||
+            data.type !==
+                "project-manager-sources" ||
+            data.version !==
+                SOURCE_EXPORT_VERSION ||
+            !Array.isArray(
+                data.sources
+            )
+        ) {
+
+            alert(
+                "This is not a valid Project Manager sources export."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            data.sources.length === 0
+        ) {
+
+            alert(
+                "The imported file contains no sources."
+            );
+
+            return;
+
+        }
+
+
+        /* -------------------------------------------------
+           BUILD IMPORTED SOURCES
+        ------------------------------------------------- */
+
+        const importedSources = [];
+
+
+        for (
+            const exportedSource
+            of data.sources
+        ) {
+
+            if (
+                !exportedSource ||
+                typeof exportedSource.name !==
+                    "string"
+            ) {
+
+                continue;
+
+            }
+
+
+            /*
+                Tell the user exactly which source
+                they are reconnecting.
+            */
+
+            const shouldSelect =
+                confirm(
+                    `Select the folder for the source "${exportedSource.name}".\n\n` +
+                    `The folder you select will become the "${exportedSource.name}" source.`
+                );
+
+
+            if (
+                !shouldSelect
+            ) {
+
+                /*
+                    If the user skips this source,
+                    don't import it.
+                */
+
+                continue;
+
+            }
+
+
+            const sourceHandle =
+                await showDirectoryPicker({
+
+                    mode:
+                        "readwrite"
+
+                });
+
+
+            importedSources.push({
+
+                id:
+                    crypto.randomUUID(),
+
+                name:
+                    exportedSource.name,
+
+                handle:
+                    sourceHandle,
+
+                icon:
+                    typeof exportedSource.icon ===
+                        "string"
+                        ? exportedSource.icon
+                        : "ph-folder",
+
+                color:
+                    typeof exportedSource.color ===
+                        "string"
+                        ? exportedSource.color
+                        : "#8b8b8b"
+
+            });
+
+        }
+
+
+        if (
+            importedSources.length === 0
+        ) {
+
+            setStatus(
+                "No valid sources were imported"
+            );
+
+            return;
+
+        }
+
+
+        /* -------------------------------------------------
+           ADD IMPORTED SOURCES
+        ------------------------------------------------- */
+
+        sources.push(
+            ...importedSources
+        );
+
+
+        await saveSources();
+
+
+        /*
+            Re-check permissions and reload
+            the projects using the newly imported
+            sources.
+        */
+
+        await loadSources();
+
+
+        renderSources();
+
+        renderProjects();
+
+        renderFilterSources();
+
+
+        setStatus(
+            `Imported ${importedSources.length} ${
+                importedSources.length === 1
+                    ? "source"
+                    : "sources"
+            }`
+        );
+
+
+    }
+    catch (error) {
+
+        /*
+            User cancelling a picker throws an
+            AbortError. That isn't an actual error.
+        */
+
+        if (
+            error?.name ===
+            "AbortError"
+        ) {
+
+            return;
+
+        }
+
+
+        console.error(
+            "Failed to import sources:",
+            error
+        );
+
+
+        setStatus(
+            "Could not import sources"
+        );
+
+    }
+
+}
+
+
+
+exportSourcesButton.addEventListener(
+    "click",
+    exportSources
+);
+
+importSourcesButton.addEventListener(
+    "click",
+    importSources
+);
 
 
 
