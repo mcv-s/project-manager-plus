@@ -2871,7 +2871,7 @@ async function renderProjectItems() {
         // Seperator between current + abandoned projects
 
         if (
-            elevateActiveProjects &&
+            deprecatedLast &&
             !previousProjectWasAbandoned &&
             isAbandoned
         ) {
