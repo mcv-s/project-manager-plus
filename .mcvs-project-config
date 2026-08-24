@@ -2,5 +2,7 @@
     "version": 1,
     "icon": "folder",
     "iconColor": "",
-    "deprecated": false
+    "deprecated": false,
+    "state": "active",
+    "tags": null
 }

@@ -455,6 +455,11 @@ function normalizeProjectConfig(config) {
         state:
             typeof config?.state === "string"
                 ? config.state
+                : null,
+
+        tags:
+            typeof config?.tags === "string"
+                ? config.tags
                 : null
     };
 
@@ -2821,23 +2826,31 @@ async function renderProjectItems() {
         }`;
 
 
-    let previousProjectWasActive =
-        false;
+
+
+    let previousProjectWasActive = false;
+    let previousProjectWasAbandoned = false;
 
 
     for (
         const project of sortedProjects
     ) {
 
-        const isActive =
-            project.config?.state ===
-            "active";
+        const isActive = project.config?.state === "active";
+        const isAbandoned = project.config?.deprecated;
+
+
+
+
+
 
 
         /*
             Add a visual separator when
             transitioning from active
-            projects to other projects.
+            projects to other projects,
+            
+            or from/to deprecated/abandoned projects
         */
 
         if (
@@ -2846,20 +2859,40 @@ async function renderProjectItems() {
             !isActive
         ) {
 
-            const separator =
-                document.createElement(
-                    "div"
-                );
+            const separator = document.createElement("div");
+            separator.className = "projects-separator";
+            projectGrid.appendChild(separator);
 
-            separator.className =
-                "active-projects-separator";
-
-
-            projectGrid.appendChild(
-                separator
-            );
 
         }
+
+
+
+        // Seperator between current + abandoned projects
+
+        if (
+            elevateActiveProjects &&
+            !previousProjectWasAbandoned &&
+            isAbandoned
+        ) {
+
+            const separator = document.createElement("div");
+            separator.className = "projects-separator";
+            projectGrid.appendChild(separator);
+
+
+        }
+
+
+
+
+
+
+
+
+
+
+
 
 
         const source =
@@ -3001,8 +3034,8 @@ async function renderProjectItems() {
         );
 
 
-        previousProjectWasActive =
-            isActive;
+        previousProjectWasActive = isActive;
+        previousProjectWasAbandoned = isAbandoned;
 
     }
 
