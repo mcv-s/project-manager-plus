@@ -1363,7 +1363,7 @@ function renderSources() {
             "settings-description";
 
         empty.textContent =
-            "No sources added yet.";
+            "";
 
         sourcesContainer.appendChild(
             empty
@@ -1440,6 +1440,8 @@ function renderSources() {
                 ? source.name.slice(0, 8) + "..." + source.name.slice(-8)
                 : source.name;
 
+        label.setAttribute("data-tooltip", source.name)
+
         const description =
             document.createElement(
                 "div"
@@ -1475,15 +1477,21 @@ function renderSources() {
 
 
         const pathButton = document.createElement("button");
-        pathButton.className = source.path
+        pathButton.className = source.handle && source.path
             ? "source-path-button"
             : "source-path-button source-path-alert";
         pathButton.type = "button";
-        pathButton.title = source.path ? "Change source path" : "Set source path";
-        pathButton.innerHTML = source.path
-            ? `<i class="ph ph-file"></i>`
+        pathButton.title = source.handle
+            ? (source.path ? "Change source path" : "Set source path")
+            : "Connect folder";
+        pathButton.innerHTML = source.handle
+            ? (source.path
+                ? `<i class="ph ph-folder-dashed"></i>`
+                : `<i class="ph ph-file"></i>`)
             : `<i class="ph ph-warning"></i>`;
-        if (!source.path) {
+        if (!source.handle) {
+            pathButton.setAttribute("data-tooltip", "Connect imported source folder")
+        } else if (!source.path) {
             pathButton.setAttribute("data-tooltip", "Source has no connected path!")
         } else {
             pathButton.setAttribute("data-tooltip", "Set connected path")
@@ -1492,6 +1500,25 @@ function renderSources() {
 
 
         pathButton.addEventListener("click", async () => {
+            if (!source.handle) {
+                try {
+                    source.handle = await window.showDirectoryPicker({
+                        mode: "readwrite"
+                    });
+                    await saveSources();
+                    await refreshProjects(true);
+                    renderSources();
+                    renderProjects();
+                    renderFilterSources();
+                } catch (error) {
+                    if (error?.name !== "AbortError") {
+                        console.error("Failed to connect source:", error);
+                        setStatus("Could not connect source");
+                    }
+                }
+                return;
+            }
+
             const path = window.prompt(
                 "Enter the full local path for this source:",
                 source.path || ""
@@ -2380,7 +2407,7 @@ function renderFilterSources() {
             "settings-description";
 
         empty.textContent =
-            "No sources added.";
+            "";
 
         filterSources.appendChild(
             empty
@@ -3974,7 +4001,14 @@ async function exportSources() {
 
                 color:
                     source.color ||
-                    "#8b8b8b"
+                    "#8b8b8b",
+
+                // Keep the manually connected local path portable in the
+                // export. Older versions ignore unknown fields.
+                path:
+                    typeof source.path === "string"
+                        ? source.path
+                        : ""
 
             })
         )
@@ -4170,34 +4204,10 @@ async function importSources() {
                 they are reconnecting.
             */
 
-            const shouldSelect =
-                confirm(
-                    `Select the folder for the source "${exportedSource.name}".\n\n` +
-                    `The folder you select will become the "${exportedSource.name}" source.`
-                );
-
-
-            if (
-                !shouldSelect
-            ) {
-
-                /*
-                    If the user skips this source,
-                    don't import it.
-                */
-
-                continue;
-
-            }
-
-
-            const sourceHandle =
-                await showDirectoryPicker({
-
-                    mode:
-                        "readwrite"
-
-                });
+            const savedPath =
+                typeof exportedSource.path === "string"
+                    ? exportedSource.path.trim()
+                    : "";
 
 
             importedSources.push({
@@ -4209,7 +4219,7 @@ async function importSources() {
                     exportedSource.name,
 
                 handle:
-                    sourceHandle,
+                    null,
 
                 icon:
                     typeof exportedSource.icon ===
@@ -4221,7 +4231,12 @@ async function importSources() {
                     typeof exportedSource.color ===
                         "string"
                         ? exportedSource.color
-                        : "#8b8b8b"
+                        : "#8b8b8b",
+
+                // `path` was not present in older v1 exports, so treat it
+                // as optional to keep those files importable.
+                path:
+                    savedPath
 
             });
 
@@ -5104,6 +5119,14 @@ async function initialize() {
 
     renderSources();
 
+    projectFilterSources =
+        JSON.parse(
+            localStorage.getItem(
+                "projectFilterSources"
+            ) || "[]"
+        );
+
+    initializeProjectFilters();
 
 
     await refreshProjects();
@@ -5114,19 +5137,6 @@ async function initialize() {
 
 
     updateCreationButtons();
-
-
-    projectFilterSources =
-        JSON.parse(
-            localStorage.getItem(
-                "projectFilterSources"
-            ) || "[]"
-        );
-
-
-    renderFilterSources();
-
-
 
 
 }
