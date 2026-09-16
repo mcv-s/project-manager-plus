@@ -817,6 +817,54 @@ body {
 
 }
 
+.source-icon-input {
+    width: 130px;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 9px;
+    border: 1px solid var(--button-border);
+    border-radius: 6px;
+    background: var(--button-bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+}
+
+.source-path-button,
+.settings-danger {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.source-path-button {
+    color: var(--muted);
+    font-size: 18px;
+}
+
+.source-path-button {
+    color: var(--text);
+}
+
+.source-path-alert {
+    border-radius: 6px;
+    background: rgba(245, 190, 55, .16);
+    color: #d39b16;
+}
+
+.settings-danger {
+    color: #d45555;
+    font-size: 18px;
+}
+
+.settings-danger:hover,
+.source-path-button:hover {
+    opacity: .75;
+}
+
 
 .source-setting-control {
 

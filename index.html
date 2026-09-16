@@ -177,7 +177,6 @@
 
 
 
-            <!-- Deprecated -->
 
 
 
@@ -193,6 +192,20 @@
 
             </div>
 
+
+            <!-- Deprecated -->
+            <label class="project-edit-checkbox">
+
+                <input id="projectEditDeprecated" type="checkbox">
+
+                <span>
+                    Deprecated/Abandoned
+                </span>
+
+            </label>
+
+            <br>
+
             <div class="project-edit-field">
 
                 <label for="projectEditDescription">
@@ -207,24 +220,18 @@
             <div class="project-edit-field">
 
                 <label for="projectEditTodoistData">
-                    Todoist data
+                    Todoist Project Section Link <i class="ph ph-info"
+                        data-tooltip="Todoist Project Section > • • • > Copy Section Link"></i>
                 </label>
 
                 <textarea id="projectEditTodoistData" class="create-input project-edit-textarea"
-                    placeholder="One list item per line"></textarea>
+                    placeholder="Todoist section link (app.todoist.com/app/section/[section-name]-[id])" rows="1"
+                    style="height: 100px; resize: vertical;"></textarea>
 
             </div>
 
 
-            <label class="project-edit-checkbox">
 
-                <input id="projectEditDeprecated" type="checkbox">
-
-                <span>
-                    Deprecated
-                </span>
-
-            </label>
 
 
 
@@ -576,7 +583,7 @@
 
                 <nav class="settings-nav">
 
-                        <button class="
+                    <button class="
                             settings-nav-item
                             active
                         " data-page="sources">
@@ -612,7 +619,7 @@
                         </h2>
 
 
-                        <p>
+                        <p id="settingsPageDesc">
 
                             Choose where your projects live.
 
@@ -712,8 +719,7 @@
                         <h3>Todoist API key</h3>
 
                         <p class="settings-section-description">
-                            Add your Todoist API key to enable future integrations.
-                            It is stored locally on this device and is not used yet.
+                            Add your Todoist API key to enable todoist integrations.
                         </p>
 
                         <label class="settings-label" for="todoistApiKey">
@@ -722,8 +728,7 @@
 
                         <div class="settings-key-field">
                             <input id="todoistApiKey" class="create-input" type="text"
-                                placeholder="Paste your Todoist API key" autocomplete="off"
-                                spellcheck="false">
+                                placeholder="Paste your Todoist API key" autocomplete="off" spellcheck="false">
                             <button class="settings-save" id="saveTodoistApiKey" type="button">
                                 Save key
                             </button>

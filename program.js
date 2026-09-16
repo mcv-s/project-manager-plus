@@ -44,6 +44,7 @@ const importSourcesButton = document.getElementById("loadSourcesButton");
 const settingsNavItems = document.querySelectorAll(".settings-nav-item");
 const settingsPages = document.querySelectorAll(".settings-page");
 const settingsPageTitle = document.getElementById("settingsPageTitle");
+const settingsPageDesc = document.getElementById("settingsPageDesc");
 const todoistApiKeyInput = document.getElementById("todoistApiKey");
 const saveTodoistApiKeyButton = document.getElementById("saveTodoistApiKey");
 const todoistApiKeyStatus = document.getElementById("todoistApiKeyStatus");
@@ -707,7 +708,12 @@ async function loadSources() {
 
                                 color:
                                     source.color ||
-                                    "#8b8b8b"
+                                    "#8b8b8b",
+
+                                path:
+                                    typeof source.path === "string"
+                                        ? source.path
+                                        : ""
 
                             })
                         );
@@ -1407,8 +1413,9 @@ function renderSources() {
             "#8b8b8b";
 
         icon.innerHTML =
-            `<i class="ph ${source.icon ||
-            "ph-folder"
+            `<i class="ph ${source.icon?.startsWith("ph-")
+                ? source.icon
+                : `ph-${source.icon || "folder"}`
             }"></i>`;
 
 
@@ -1429,8 +1436,9 @@ function renderSources() {
             "settings-label";
 
         label.textContent =
-            source.name;
-
+            source.name.length > 19
+                ? source.name.slice(0, 8) + "..." + source.name.slice(-8)
+                : source.name;
 
         const description =
             document.createElement(
@@ -1440,8 +1448,14 @@ function renderSources() {
         description.className =
             "settings-description";
 
+        const path = source.path || "Path unknown";
+
         description.textContent =
-            "Project source";
+            path.length > 27
+                ? path.slice(0, 12) + "..." + path.slice(-12)
+                : path;
+
+        description.setAttribute("data-tooltip", path)
 
 
         text.append(
@@ -1450,10 +1464,49 @@ function renderSources() {
         );
 
 
+
+
+
         information.append(
             icon,
             text
         );
+
+
+
+        const pathButton = document.createElement("button");
+        pathButton.className = source.path
+            ? "source-path-button"
+            : "source-path-button source-path-alert";
+        pathButton.type = "button";
+        pathButton.title = source.path ? "Change source path" : "Set source path";
+        pathButton.innerHTML = source.path
+            ? `<i class="ph ph-file"></i>`
+            : `<i class="ph ph-warning"></i>`;
+        if (!source.path) {
+            pathButton.setAttribute("data-tooltip", "Source has no connected path!")
+        } else {
+            pathButton.setAttribute("data-tooltip", "Set connected path")
+        }
+
+
+
+        pathButton.addEventListener("click", async () => {
+            const path = window.prompt(
+                "Enter the full local path for this source:",
+                source.path || ""
+            );
+
+            if (path === null) return;
+
+            source.path = path.trim().replace(/^["']|["']$/g, "");
+
+            await saveSources();
+            renderSources();
+        });
+
+
+
 
 
         /* Customization */
@@ -1484,84 +1537,22 @@ function renderSources() {
             );
 
         iconLabel.textContent =
-            "Icon";
+            "";
 
 
-        const iconSelect =
-            document.createElement(
-                "select"
-            );
-
-        iconSelect.className =
-            "source-icon-select";
+        const iconInput = document.createElement("input");
+        iconInput.className = "source-icon-input";
+        iconInput.type = "text";
+        iconInput.value = (source.icon || "folder").replace(/^ph-/, "");
+        iconInput.placeholder = "ph-folder";
 
 
-        const iconOptions = [
-
-            ["ph-folder", "Folder"],
-            ["ph-folder-open", "Folder Open"],
-            ["ph-cloud", "Cloud"],
-            ["ph-code", "Code"],
-            ["ph-monitor", "Monitor"],
-            ["ph-terminal", "Terminal"],
-            ["ph-file-code", "Code File"],
-            ["ph-globe", "Web"],
-            ["ph-game-controller", "Game"],
-            ["ph-brain", "AI"],
-            ["ph-database", "Database"],
-            ["ph-image", "Images"],
-            ["ph-music-notes", "Music"],
-            ["ph-video-camera", "Video"],
-            ["ph-book", "Book"],
-            ["ph-notebook", "Notebook"],
-            ["ph-rocket", "Rocket"],
-            ["ph-star", "Star"],
-            ["ph-heart", "Heart"],
-            ["ph-lightning", "Lightning"],
-            ["ph-wrench", "Tools"],
-            ["ph-package", "Package"],
-            ["ph-archive", "Archive"]
-
-        ];
-
-
-        for (
-            const [
-                iconClass,
-                iconName
-            ]
-            of iconOptions
-        ) {
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-            option.value =
-                iconClass;
-
-            option.textContent =
-                iconName;
-
-            iconSelect.appendChild(
-                option
-            );
-
-        }
-
-
-        iconSelect.value =
-            source.icon ||
-            "ph-folder";
-
-
-        iconSelect.addEventListener(
+        iconInput.addEventListener(
             "change",
             async () => {
 
                 source.icon =
-                    iconSelect.value;
+                    iconInput.value.trim() || "ph-folder";
 
                 await saveSources();
 
@@ -1575,7 +1566,7 @@ function renderSources() {
 
         iconGroup.append(
             iconLabel,
-            iconSelect
+            iconInput
         );
 
 
@@ -1596,7 +1587,7 @@ function renderSources() {
             );
 
         colorLabel.textContent =
-            "Color";
+            "";
 
 
         const colorInput =
@@ -1671,18 +1662,20 @@ function renderSources() {
         removeButton.innerHTML =
             `
                 <i class="ph ph-trash"></i>
-                Remove
             `;
+        removeButton.title = "Remove source";
+
+        removeButton.setAttribute("data-tooltip", "Remove Source")
 
 
         removeButton.addEventListener(
             "click",
             () => {
+                if (!window.confirm(`Remove the source "${source.name}"? \n\nThe source will still be at the same path.`)) return;
 
                 removeSource(
                     source.id
                 );
-
             }
         );
 
@@ -1690,6 +1683,7 @@ function renderSources() {
         row.append(
             information,
             customization,
+            pathButton,
             removeButton
         );
 
@@ -1933,15 +1927,15 @@ async function renderDirectoryContents() {
 
     overview.innerHTML =
         `
-            <div class="project-overview-heading">
+        <div class="project-overview-heading">
 
-                <div class="project-overview-identity">
+            <div class="project-overview-identity">
 
-                    <div class="project-overview-icon" style="color: ${escapeHtml(currentProjectState?.iconColor || "var(--muted)")}">
-                        <i class="ph ${getCurrentProjectIconClass()}"></i>
-                    </div>
+                <div class="project-overview-icon" style="color: ${escapeHtml(currentProjectState?.iconColor || "var(--muted)")}">
+                    <i class="ph ${getCurrentProjectIconClass()}"></i>
+                </div>
 
-                    <div>
+                <div>
 
                     <h1>
                         ${escapeHtml(currentDirectoryName)}
@@ -1953,19 +1947,26 @@ async function renderDirectoryContents() {
 
                 </div>
 
-                <div class="project-overview-actions">
-                    <span class="project-overview-status">
-                        ${getProjectStateLabel()}
-                    </span>
+            </div>
 
-                    <button class="project-overview-edit" type="button">
-                        <i class="ph ph-pencil-simple"></i>
-                        Edit
-                    </button>
-                </div>
+            <div class="project-overview-actions">
+
+                <span class="project-overview-status">
+                    ${getProjectStateLabel()}
+                </span>
+
+                <button class="project-overview-edit" type="button">
+                    <i class="ph ph-pencil-simple"></i>
+                    Edit
+                </button>
 
             </div>
-        `;
+
+        </div>
+    `;
+
+
+
 
     const todoPanel =
         document.createElement("section");
@@ -1991,15 +1992,15 @@ async function renderDirectoryContents() {
                 <h2>Todo list</h2>
                 <div class="project-todo-list" aria-label="Project todo list">
                     ${tasks.length > 0
-                        ? tasks.map(task => `
+                    ? tasks.map(task => `
                             <a class="project-todo-item" href="${escapeHtml(`https://app.todoist.com/app/task/${task.id}`)}" target="_blank" rel="noopener noreferrer">
                                 <span class="project-todo-circle" aria-hidden="true"></span>
                                 <strong>${escapeHtml(task.content)}${formatTodoistDue(task)
-                                    ? ` <span class="project-todo-due">- ${escapeHtml(formatTodoistDue(task))}</span>`
-                                    : ""}</strong>
+                            ? ` <span class="project-todo-due">- ${escapeHtml(formatTodoistDue(task))}</span>`
+                            : ""}</strong>
                             </a>
                         `).join("")
-                        : `<p class="settings-description">No active tasks in this Todoist section.</p>`}
+                    : `<p class="settings-description">No active tasks in this Todoist section.</p>`}
                 </div>
             `;
         } catch (error) {
@@ -3005,8 +3006,6 @@ function getProjectSource(project) {
 
 
 async function renderProjectItems() {
-    sortProjects();
-
     projectGrid.innerHTML = "";
 
 
@@ -3225,7 +3224,7 @@ async function renderProjectItems() {
         projectElement.addEventListener("click", event => { /* If the pencil was clicked, do not open the project. */ if (event.target.closest(".project-edit-icon")) { return; } openProject(project); });
 
 
-        
+
         projectGrid.appendChild(
             projectElement
         );
@@ -3846,6 +3845,7 @@ settingsNavItems.forEach(item => {
         settingsNavItems.forEach(navItem => navItem.classList.toggle("active", navItem === item));
         settingsPages.forEach(settingsPage => settingsPage.classList.toggle("active", settingsPage.id === `${page}Page`));
         settingsPageTitle.textContent = page === "todoist" ? "Todoist integration" : "Sources";
+        settingsPageDesc.textContent = page === "todoist" ? "Integrate to-do lists" : "Choose where your projects live";
 
     });
 
