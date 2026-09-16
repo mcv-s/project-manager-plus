@@ -48,6 +48,9 @@ const settingsPageDesc = document.getElementById("settingsPageDesc");
 const todoistApiKeyInput = document.getElementById("todoistApiKey");
 const saveTodoistApiKeyButton = document.getElementById("saveTodoistApiKey");
 const todoistApiKeyStatus = document.getElementById("todoistApiKeyStatus");
+const todoistTaskLimitInput = document.getElementById("todoistTaskLimit");
+const saveTodoistTaskLimitButton = document.getElementById("saveTodoistTaskLimit");
+const todoistTaskLimitStatus = document.getElementById("todoistTaskLimitStatus");
 
 
 /* =========================================================
@@ -78,6 +81,8 @@ let directoryHistory = [];
 let createMode = null;
 
 const TODOIST_API_KEY_STORAGE_KEY = "todoistApiKey";
+const TODOIST_TASK_LIMIT_STORAGE_KEY = "todoistTaskLimit";
+const DEFAULT_TODOIST_TASK_LIMIT = 10;
 
 
 
@@ -1888,6 +1893,33 @@ function getCurrentProjectIconClass() {
 
 }
 
+function getCurrentProjectPath() {
+
+    const source = getProjectSource(currentProject);
+
+    if (!source?.path || !currentProject?.name) {
+        return "";
+    }
+
+    return `${source.path.replace(/[\\/]+$/, "")}\\${currentProject.name}`;
+
+}
+
+function openCurrentProjectInVSCode() {
+
+    const projectPath = getCurrentProjectPath();
+
+    if (!projectPath) {
+        setStatus("Connect a source path to open this project in VS Code");
+        return;
+    }
+
+    const vscodeUrl = `vscode://file/${encodeURI(projectPath.replace(/\\/g, "/"))}?windowId=_blank`;
+
+    window.location.href = vscodeUrl;
+
+}
+
 
 function formatTodoistDue(task) {
 
@@ -1965,7 +1997,7 @@ async function renderDirectoryContents() {
                 <div>
 
                     <h1>
-                        ${escapeHtml(currentDirectoryName)}
+                        ${escapeHtml(currentDirectoryName)} <i class="ph ph-arrow-square-out project-overview-vscode" id="open-vs-code" role="button" tabindex="0" title="Open in VS Code" aria-label="Open in VS Code"></i>
                     </h1>
 
                     <p class="project-overview-description">
@@ -2012,14 +2044,16 @@ async function renderDirectoryContents() {
         todoPanel.innerHTML = `<h2>Todo list</h2><p class="settings-description">Loading Todoist tasks…</p>`;
 
         try {
-            const tasks = (await loadTodoistTasks(todoistSectionUrl, todoistApiKey))
-                .sort((a, b) => Number(Boolean(b.due)) - Number(Boolean(a.due)));
+            const tasks = sortTodoistTasks(await loadTodoistTasks(todoistSectionUrl, todoistApiKey));
+            const taskLimit = getTodoistTaskLimit();
+            const visibleTasks = tasks.slice(0, taskLimit);
+            const hasMoreTasks = tasks.length > taskLimit;
 
             todoPanel.innerHTML = `
                 <h2>Todo list</h2>
                 <div class="project-todo-list" aria-label="Project todo list">
-                    ${tasks.length > 0
-                    ? tasks.map(task => `
+                    ${visibleTasks.length > 0
+                    ? visibleTasks.map(task => `
                             <a class="project-todo-item" href="${escapeHtml(`https://app.todoist.com/app/task/${task.id}`)}" target="_blank" rel="noopener noreferrer">
                                 <span class="project-todo-circle" aria-hidden="true"></span>
                                 <strong>${escapeHtml(task.content)}${formatTodoistDue(task)
@@ -2029,7 +2063,19 @@ async function renderDirectoryContents() {
                         `).join("")
                     : `<p class="settings-description">No active tasks in this Todoist section.</p>`}
                 </div>
+                ${hasMoreTasks ? `<button class="todoist-show-more" type="button">Show more (${tasks.length - taskLimit})</button>` : ""}
             `;
+
+            const showMoreButton = todoPanel.querySelector(".todoist-show-more");
+            showMoreButton?.addEventListener("click", () => {
+                todoPanel.querySelector(".project-todo-list").innerHTML = tasks.map(task => `
+                    <a class="project-todo-item" href="${escapeHtml(`https://app.todoist.com/app/task/${task.id}`)}" target="_blank" rel="noopener noreferrer">
+                        <span class="project-todo-circle" aria-hidden="true"></span>
+                        <strong>${escapeHtml(task.content)}${formatTodoistDue(task) ? ` <span class="project-todo-due">- ${escapeHtml(formatTodoistDue(task))}</span>` : ""}</strong>
+                    </a>
+                `).join("");
+                showMoreButton.remove();
+            });
         } catch (error) {
             console.error("Could not load Todoist tasks:", error);
             todoPanel.innerHTML = `<h2>Todo list</h2><p class="settings-description">Could not load Todoist tasks.</p>`;
@@ -2040,6 +2086,16 @@ async function renderDirectoryContents() {
         "click",
         () => openProjectEditModal(currentProject)
     );
+
+    const vscodeButton = overview.querySelector("#open-vs-code");
+
+    vscodeButton.addEventListener("click", openCurrentProjectInVSCode);
+    vscodeButton.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openCurrentProjectInVSCode();
+        }
+    });
 
     projectGrid.appendChild(
         overview
@@ -3822,6 +3878,7 @@ function openSettings() {
 
     renderSources();
     loadTodoistApiKey();
+    loadTodoistTaskLimit();
 
 
     settingsModal.classList.add(
@@ -3862,6 +3919,30 @@ async function loadTodoistTasks(sectionUrl, apiKey) {
 
 }
 
+function getTodoistTaskLimit() {
+    const savedLimit = Number(localStorage.getItem(TODOIST_TASK_LIMIT_STORAGE_KEY));
+    return Number.isInteger(savedLimit) && savedLimit > 0
+        ? savedLimit
+        : DEFAULT_TODOIST_TASK_LIMIT;
+}
+
+function sortTodoistTasks(tasks) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return tasks.sort((a, b) => {
+        const aDue = a.due?.date ? new Date(a.due.date) : null;
+        const bDue = b.due?.date ? new Date(b.due.date) : null;
+        const aOverdue = aDue && aDue < today;
+        const bOverdue = bDue && bDue < today;
+
+        return Number(bOverdue) - Number(aOverdue)
+            || Number(b.priority || 1) - Number(a.priority || 1)
+            || (aDue?.getTime() || Infinity) - (bDue?.getTime() || Infinity)
+            || a.content.localeCompare(b.content);
+    });
+}
+
 
 settingsNavItems.forEach(item => {
 
@@ -3890,6 +3971,7 @@ todoistApiKeyInput.addEventListener("focus", () => {
 
 
 saveTodoistApiKeyButton.addEventListener("click", saveTodoistApiKey);
+saveTodoistTaskLimitButton.addEventListener("click", saveTodoistTaskLimit);
 
 
 function maskTodoistApiKey(key) {
@@ -3913,6 +3995,27 @@ function loadTodoistApiKey() {
         ? "A key is saved locally. Click the field to replace it."
         : "No key saved yet.";
 
+}
+
+function loadTodoistTaskLimit() {
+    todoistTaskLimitInput.value = getTodoistTaskLimit();
+    todoistTaskLimitStatus.textContent = `Currently showing up to ${getTodoistTaskLimit()} tasks per project.`;
+}
+
+function saveTodoistTaskLimit() {
+    const limit = Number(todoistTaskLimitInput.value);
+
+    if (!Number.isInteger(limit) || limit < 1) {
+        todoistTaskLimitStatus.textContent = "Enter a whole number greater than zero.";
+        return;
+    }
+
+    localStorage.setItem(TODOIST_TASK_LIMIT_STORAGE_KEY, String(limit));
+    loadTodoistTaskLimit();
+
+    if (currentDirectory) {
+        renderDirectoryContents();
+    }
 }
 
 

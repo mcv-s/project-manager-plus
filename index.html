@@ -301,6 +301,8 @@
         <div class="toolbar-actions">
 
 
+
+
             <button class="toolbar-icon-button" id="newProjectButton" title="New Project"
                 data-tooltip="Create new project">
                 <i class="ph ph-plus"></i>
@@ -309,6 +311,13 @@
             <button class="toolbar-icon-button" id="addFileButton" title="List view" data-tooltip="Add file">
                 <i class="ph ph-file-plus"></i>
             </button>
+
+
+            <button class="toolbar-icon-button" id="addFolderButton" title="List view" data-tooltip="Add folder">
+                <i class="ph ph-folder-plus"></i>
+            </button>
+
+
 
             <div class="filter-container">
 
@@ -445,12 +454,6 @@
 
             </div>
 
-
-
-
-            <button class="toolbar-icon-button" id="addFolderButton" title="List view" data-tooltip="Add folder">
-                <i class="ph ph-folder-plus"></i>
-            </button>
 
 
 
@@ -714,6 +717,8 @@
 
                 <div class="settings-page" id="todoistPage">
 
+
+
                     <section class="settings-section">
 
                         <h3>Todoist API key</h3>
@@ -735,6 +740,27 @@
                         </div>
 
                         <p class="settings-description" id="todoistApiKeyStatus"></p>
+
+                    </section>
+
+                    <section class="settings-section">
+
+                        <h3>Task display limit</h3>
+
+                        <p class="settings-section-description">
+                            Limit the number of tasks shown in each project. Overdue and higher-priority tasks appear
+                            first.
+                        </p>
+
+                        <div class="settings-key-field">
+                            <input id="todoistTaskLimit" class="create-input" type="number" min="1" step="1"
+                                placeholder="10">
+                            <button class="settings-save" id="saveTodoistTaskLimit" type="button">
+                                Save limit
+                            </button>
+                        </div>
+
+                        <p class="settings-description" id="todoistTaskLimitStatus"></p>
 
                     </section>
 
