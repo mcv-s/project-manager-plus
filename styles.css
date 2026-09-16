@@ -1929,8 +1929,40 @@ body {
     width: 12px;
     height: 12px;
     margin-top: 2px;
-    border: 1px solid var(--muted);
+    border: 2px solid var(--todoist-priority-color, var(--muted));
     border-radius: 50%;
+    opacity: 0.82;
+    transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.project-todo-item:hover .project-todo-circle {
+    opacity: 0.82;
+}
+
+.todoist-sort-order {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-width: 360px;
+}
+
+.todoist-sort-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--button-bg);
+    color: var(--text);
+    cursor: grab;
+    font-size: 13px;
+}
+
+.todoist-sort-option:active,
+.todoist-sort-option.is-dragging {
+    cursor: grabbing;
+    opacity: 0.55;
 }
 
 .project-todo-item input {

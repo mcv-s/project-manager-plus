@@ -51,6 +51,8 @@ const todoistApiKeyStatus = document.getElementById("todoistApiKeyStatus");
 const todoistTaskLimitInput = document.getElementById("todoistTaskLimit");
 const saveTodoistTaskLimitButton = document.getElementById("saveTodoistTaskLimit");
 const todoistTaskLimitStatus = document.getElementById("todoistTaskLimitStatus");
+const todoistSortOrder = document.getElementById("todoistSortOrder");
+const todoistSortOrderStatus = document.getElementById("todoistSortOrderStatus");
 
 
 /* =========================================================
@@ -83,6 +85,8 @@ let createMode = null;
 const TODOIST_API_KEY_STORAGE_KEY = "todoistApiKey";
 const TODOIST_TASK_LIMIT_STORAGE_KEY = "todoistTaskLimit";
 const DEFAULT_TODOIST_TASK_LIMIT = 10;
+const TODOIST_SORT_ORDER_STORAGE_KEY = "todoistSortOrder";
+const DEFAULT_TODOIST_SORT_ORDER = ["priority", "date", "label"];
 
 
 
@@ -1927,7 +1931,7 @@ function formatTodoistDue(task) {
         return "";
     }
 
-    const dueDate = new Date(task.due.datetime || `${task.due.date}T00:00:00`);
+    const dueDate = getTodoistDueDate(task);
 
     if (Number.isNaN(dueDate.getTime())) {
         return task.due.string || "";
@@ -1936,10 +1940,14 @@ function formatTodoistDue(task) {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    const dateKey = date => date.toISOString().slice(0, 10);
-    const dayLabel = dateKey(dueDate) === dateKey(today)
+    const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    // Todoist's `date` is the task's calendar date; use it for the day label so
+    // an ISO datetime's timezone conversion cannot turn a Todoist "today" task
+    // into a different displayed day.
+    const dueDay = task.due.date || dateKey(dueDate);
+    const dayLabel = dueDay === dateKey(today)
         ? "Today"
-        : dateKey(dueDate) === dateKey(tomorrow)
+        : dueDay === dateKey(tomorrow)
             ? "Tomorrow"
             : dueDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const timeLabel = task.due.datetime
@@ -2055,7 +2063,7 @@ async function renderDirectoryContents() {
                     ${visibleTasks.length > 0
                     ? visibleTasks.map(task => `
                             <a class="project-todo-item" href="${escapeHtml(`https://app.todoist.com/app/task/${task.id}`)}" target="_blank" rel="noopener noreferrer">
-                                <span class="project-todo-circle" aria-hidden="true"></span>
+                                <span class="project-todo-circle" style="--todoist-priority-color: ${getTodoistPriorityColor(task.priority)}" aria-label="${escapeHtml(getTodoistPriorityLabel(task.priority))}"></span>
                                 <strong>${escapeHtml(task.content)}${formatTodoistDue(task)
                             ? ` <span class="project-todo-due">- ${escapeHtml(formatTodoistDue(task))}</span>`
                             : ""}</strong>
@@ -2070,7 +2078,7 @@ async function renderDirectoryContents() {
             showMoreButton?.addEventListener("click", () => {
                 todoPanel.querySelector(".project-todo-list").innerHTML = tasks.map(task => `
                     <a class="project-todo-item" href="${escapeHtml(`https://app.todoist.com/app/task/${task.id}`)}" target="_blank" rel="noopener noreferrer">
-                        <span class="project-todo-circle" aria-hidden="true"></span>
+                        <span class="project-todo-circle" style="--todoist-priority-color: ${getTodoistPriorityColor(task.priority)}" aria-label="${escapeHtml(getTodoistPriorityLabel(task.priority))}"></span>
                         <strong>${escapeHtml(task.content)}${formatTodoistDue(task) ? ` <span class="project-todo-due">- ${escapeHtml(formatTodoistDue(task))}</span>` : ""}</strong>
                     </a>
                 `).join("");
@@ -3879,6 +3887,7 @@ function openSettings() {
     renderSources();
     loadTodoistApiKey();
     loadTodoistTaskLimit();
+    loadTodoistSortOrder();
 
 
     settingsModal.classList.add(
@@ -3927,20 +3936,77 @@ function getTodoistTaskLimit() {
 }
 
 function sortTodoistTasks(tasks) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const sortOrder = getTodoistSortOrder();
 
     return tasks.sort((a, b) => {
-        const aDue = a.due?.date ? new Date(a.due.date) : null;
-        const bDue = b.due?.date ? new Date(b.due.date) : null;
-        const aOverdue = aDue && aDue < today;
-        const bOverdue = bDue && bDue < today;
+        for (const criterion of sortOrder) {
+            const comparison = ({
+                priority: () => Number(b.priority || 1) - Number(a.priority || 1),
+                date: () => compareTodoistDueDates(a, b),
+                label: () => (a.labels || []).join(", ").localeCompare((b.labels || []).join(", ")),
+            }[criterion]());
 
-        return Number(bOverdue) - Number(aOverdue)
-            || Number(b.priority || 1) - Number(a.priority || 1)
-            || (aDue?.getTime() || Infinity) - (bDue?.getTime() || Infinity)
-            || a.content.localeCompare(b.content);
+            if (comparison !== 0) return comparison;
+        }
+
+        return a.content.localeCompare(b.content);
     });
+}
+
+function compareTodoistDueDates(a, b) {
+    const aDue = getTodoistDueDate(a)?.getTime() ?? Infinity;
+    const bDue = getTodoistDueDate(b)?.getTime() ?? Infinity;
+
+    return aDue - bDue;
+}
+
+function getTodoistDueDate(task) {
+    if (!task.due) return null;
+    if (task.due.datetime) return new Date(task.due.datetime);
+
+    const [year, month, day] = task.due.date.split("-").map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function isTodoistTaskOverdue(task) {
+    if (!task.due) return false;
+    if (task.due.datetime) return getTodoistDueDate(task) < new Date();
+
+    const dueDate = getTodoistDueDate(task);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return dueDate < today;
+}
+
+function getTodoistSortOrder() {
+    try {
+        const savedOrder = JSON.parse(localStorage.getItem(TODOIST_SORT_ORDER_STORAGE_KEY));
+        if (Array.isArray(savedOrder)) {
+            const migratedOrder = savedOrder.filter(key => DEFAULT_TODOIST_SORT_ORDER.includes(key));
+            const missingKeys = DEFAULT_TODOIST_SORT_ORDER.filter(key => !migratedOrder.includes(key));
+            const normalizedOrder = [...migratedOrder, ...missingKeys];
+
+            if (normalizedOrder.length === DEFAULT_TODOIST_SORT_ORDER.length) {
+                return normalizedOrder;
+            }
+        }
+    } catch (error) {
+        console.warn("Could not load Todoist sort order:", error);
+    }
+    return DEFAULT_TODOIST_SORT_ORDER;
+}
+
+function getTodoistPriorityColor(priority) {
+    return ({
+        4: "#d1453d",
+        3: "#eb8909",
+        2: "#246fe0",
+        1: "#808080"
+    })[priority] || "#808080";
+}
+
+function getTodoistPriorityLabel(priority) {
+    return priority === 4 ? "Priority 1" : priority === 3 ? "Priority 2" : priority === 2 ? "Priority 3" : "Priority 4";
 }
 
 
@@ -3972,6 +4038,40 @@ todoistApiKeyInput.addEventListener("focus", () => {
 
 saveTodoistApiKeyButton.addEventListener("click", saveTodoistApiKey);
 saveTodoistTaskLimitButton.addEventListener("click", saveTodoistTaskLimit);
+
+function loadTodoistSortOrder() {
+    const order = getTodoistSortOrder();
+    order.forEach(key => todoistSortOrder.appendChild(todoistSortOrder.querySelector(`[data-sort-key="${key}"]`)));
+    todoistSortOrderStatus.textContent = "Sorting updates automatically when you drag an option.";
+}
+
+let draggedTodoistSortOption = null;
+
+todoistSortOrder.addEventListener("dragstart", event => {
+    draggedTodoistSortOption = event.target.closest(".todoist-sort-option");
+    draggedTodoistSortOption?.classList.add("is-dragging");
+});
+
+todoistSortOrder.addEventListener("dragend", () => {
+    draggedTodoistSortOption?.classList.remove("is-dragging");
+    draggedTodoistSortOption = null;
+});
+
+todoistSortOrder.addEventListener("dragover", event => {
+    event.preventDefault();
+    const target = event.target.closest(".todoist-sort-option");
+    if (draggedTodoistSortOption && target && target !== draggedTodoistSortOption) {
+        const bounds = target.getBoundingClientRect();
+        todoistSortOrder.insertBefore(draggedTodoistSortOption, event.clientY < bounds.top + bounds.height / 2 ? target : target.nextSibling);
+    }
+});
+
+todoistSortOrder.addEventListener("drop", () => {
+    const order = [...todoistSortOrder.querySelectorAll(".todoist-sort-option")].map(option => option.dataset.sortKey);
+    localStorage.setItem(TODOIST_SORT_ORDER_STORAGE_KEY, JSON.stringify(order));
+    todoistSortOrderStatus.textContent = "Sort order saved.";
+    if (currentDirectory) renderDirectoryContents();
+});
 
 
 function maskTodoistApiKey(key) {

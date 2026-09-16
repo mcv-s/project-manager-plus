@@ -15,7 +15,7 @@
 
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    <script src="program.js" defer></script>
+    <script src="program.js?v=20260916" defer></script>
     <script src="tooltips.js" defer></script>
 
 
@@ -719,6 +719,8 @@
 
 
 
+
+
                     <section class="settings-section">
 
                         <h3>Todoist API key</h3>
@@ -763,6 +765,30 @@
                         <p class="settings-description" id="todoistTaskLimitStatus"></p>
 
                     </section>
+
+                    <section class="settings-section">
+
+                        <h3>Task sorting</h3>
+
+                        <p class="settings-section-description">
+                            Drag the fields into the order you want them applied.
+                        </p>
+
+                        <div id="todoistSortOrder" class="todoist-sort-order" aria-label="Todoist task sort order">
+                            <div class="todoist-sort-option" draggable="true" data-sort-key="priority"><i
+                                    class="ph ph-dots-six-vertical"></i> Priority</div>
+                            <div class="todoist-sort-option" draggable="true" data-sort-key="date"><i
+                                    class="ph ph-dots-six-vertical"></i> Due date</div>
+                            <div class="todoist-sort-option" draggable="true" data-sort-key="label"><i
+                                    class="ph ph-dots-six-vertical"></i> Label</div>
+                        </div>
+
+                        <p class="settings-description" id="todoistSortOrderStatus"></p>
+
+                    </section>
+
+
+
 
                 </div>
 
