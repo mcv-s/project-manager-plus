@@ -36,9 +36,17 @@ const projectEditIcon = document.getElementById("projectEditIcon");
 const projectEditIconColor = document.getElementById("projectEditIconColor");
 const projectEditDeprecated = document.getElementById("projectEditDeprecated");
 const projectEditState = document.getElementById("projectEditState");
+const projectEditDescription = document.getElementById("projectEditDescription");
+const projectEditTodoistData = document.getElementById("projectEditTodoistData");
 
 const exportSourcesButton = document.getElementById("saveSourcesButton");
 const importSourcesButton = document.getElementById("loadSourcesButton");
+const settingsNavItems = document.querySelectorAll(".settings-nav-item");
+const settingsPages = document.querySelectorAll(".settings-page");
+const settingsPageTitle = document.getElementById("settingsPageTitle");
+const todoistApiKeyInput = document.getElementById("todoistApiKey");
+const saveTodoistApiKeyButton = document.getElementById("saveTodoistApiKey");
+const todoistApiKeyStatus = document.getElementById("todoistApiKeyStatus");
 
 
 /* =========================================================
@@ -60,9 +68,15 @@ let currentDirectory = null;
 
 let currentDirectoryName = "";
 
+let currentProjectState = null;
+
+let currentProject = null;
+
 let directoryHistory = [];
 
 let createMode = null;
+
+const TODOIST_API_KEY_STORAGE_KEY = "todoistApiKey";
 
 
 
@@ -178,6 +192,9 @@ hideFinishedProjectsCheckbox.addEventListener(
 
 
 
+
+
+
 /* =========================================================
    PROJECT EDIT MODAL
 ========================================================= */
@@ -227,6 +244,14 @@ function openProjectEditModal(project) {
 
     projectEditState.value =
         config.state || "";
+
+    projectEditDescription.value =
+        config.description || "No description added yet";
+
+    projectEditTodoistData.value =
+        Array.isArray(config.todoistData)
+            ? config.todoistData.join("\n")
+            : "";
 
 
     /*
@@ -295,7 +320,16 @@ async function saveProjectEdit() {
             projectEditDeprecated.checked,
 
         state:
-            projectEditState.value
+            projectEditState.value,
+
+        description:
+            projectEditDescription.value.trim() || "No description added yet",
+
+        todoistData:
+            projectEditTodoistData.value
+                .split("\n")
+                .map(item => item.trim())
+                .filter(Boolean)
 
     };
 
@@ -415,7 +449,9 @@ const DEFAULT_PROJECT_CONFIG = {
     icon: "folder",
     iconColor: "",
     deprecated: false,
-    state: ""
+    state: "",
+    description: "No description added yet",
+    todoistData: []
 };
 
 
@@ -456,6 +492,16 @@ function normalizeProjectConfig(config) {
             typeof config?.state === "string"
                 ? config.state
                 : null,
+
+        description:
+            typeof config?.description === "string" && config.description.trim()
+                ? config.description
+                : "No description added yet",
+
+        todoistData:
+            Array.isArray(config?.todoistData)
+                ? config.todoistData.filter(item => typeof item === "string")
+                : [],
 
         tags:
             typeof config?.tags === "string"
@@ -1770,6 +1816,12 @@ async function openProject(
     currentDirectoryName =
         project.name;
 
+    currentProjectState =
+        project.config || null;
+
+    currentProject =
+        project;
+
     directoryHistory = [];
 
 
@@ -1781,6 +1833,67 @@ async function openProject(
     await renderDirectoryContents();
 
     updateCreationButtons();
+
+}
+
+
+function getProjectStateLabel() {
+
+    if (currentProjectState?.deprecated) {
+        return "Abandoned";
+    }
+
+    const state =
+        currentProjectState?.state?.trim().toLowerCase();
+
+    if (state === "active") {
+        return "Active";
+    }
+
+    if (state === "finished") {
+        return "Finished";
+    }
+
+    return "In stasis";
+
+}
+
+
+function getCurrentProjectIconClass() {
+
+    const icon = currentProjectState?.icon || "folder";
+
+    return icon.startsWith("ph-") ? icon : `ph-${icon}`;
+
+}
+
+
+function formatTodoistDue(task) {
+
+    if (!task.due) {
+        return "";
+    }
+
+    const dueDate = new Date(task.due.datetime || `${task.due.date}T00:00:00`);
+
+    if (Number.isNaN(dueDate.getTime())) {
+        return task.due.string || "";
+    }
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const dateKey = date => date.toISOString().slice(0, 10);
+    const dayLabel = dateKey(dueDate) === dateKey(today)
+        ? "Today"
+        : dateKey(dueDate) === dateKey(tomorrow)
+            ? "Tomorrow"
+            : dueDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const timeLabel = task.due.datetime
+        ? dueDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+        : "";
+
+    return timeLabel ? `${dayLabel} ${timeLabel}` : dayLabel;
 
 }
 
@@ -1800,6 +1913,113 @@ async function renderDirectoryContents() {
 
 
     projectGrid.innerHTML = "";
+
+
+    /*
+        Project overview placeholder.
+
+        This gives the open-project view a little context before
+        the filesystem contents. The copy is intentionally temporary
+        until project metadata is available.
+    */
+
+    const overview =
+        document.createElement(
+            "section"
+        );
+
+    overview.className =
+        "project-overview";
+
+    overview.innerHTML =
+        `
+            <div class="project-overview-heading">
+
+                <div class="project-overview-identity">
+
+                    <div class="project-overview-icon" style="color: ${escapeHtml(currentProjectState?.iconColor || "var(--muted)")}">
+                        <i class="ph ${getCurrentProjectIconClass()}"></i>
+                    </div>
+
+                    <div>
+
+                    <h1>
+                        ${escapeHtml(currentDirectoryName)}
+                    </h1>
+
+                    <p class="project-overview-description">
+                        ${escapeHtml(currentProjectState?.description || "No description added yet")}
+                    </p>
+
+                </div>
+
+                <div class="project-overview-actions">
+                    <span class="project-overview-status">
+                        ${getProjectStateLabel()}
+                    </span>
+
+                    <button class="project-overview-edit" type="button">
+                        <i class="ph ph-pencil-simple"></i>
+                        Edit
+                    </button>
+                </div>
+
+            </div>
+        `;
+
+    const todoPanel =
+        document.createElement("section");
+
+    todoPanel.className =
+        "project-todo-panel";
+
+    const todoistData = Array.isArray(currentProjectState?.todoistData)
+        ? currentProjectState.todoistData
+        : [];
+
+    const todoistSectionUrl = todoistData[0];
+    const todoistApiKey = localStorage.getItem("todoistApiKey");
+
+    if (todoistSectionUrl && todoistApiKey) {
+        todoPanel.innerHTML = `<h2>Todo list</h2><p class="settings-description">Loading Todoist tasks…</p>`;
+
+        try {
+            const tasks = (await loadTodoistTasks(todoistSectionUrl, todoistApiKey))
+                .sort((a, b) => Number(Boolean(b.due)) - Number(Boolean(a.due)));
+
+            todoPanel.innerHTML = `
+                <h2>Todo list</h2>
+                <div class="project-todo-list" aria-label="Project todo list">
+                    ${tasks.length > 0
+                        ? tasks.map(task => `
+                            <a class="project-todo-item" href="${escapeHtml(`https://app.todoist.com/app/task/${task.id}`)}" target="_blank" rel="noopener noreferrer">
+                                <span class="project-todo-circle" aria-hidden="true"></span>
+                                <strong>${escapeHtml(task.content)}${formatTodoistDue(task)
+                                    ? ` <span class="project-todo-due">- ${escapeHtml(formatTodoistDue(task))}</span>`
+                                    : ""}</strong>
+                            </a>
+                        `).join("")
+                        : `<p class="settings-description">No active tasks in this Todoist section.</p>`}
+                </div>
+            `;
+        } catch (error) {
+            console.error("Could not load Todoist tasks:", error);
+            todoPanel.innerHTML = `<h2>Todo list</h2><p class="settings-description">Could not load Todoist tasks.</p>`;
+        }
+    }
+
+    overview.querySelector(".project-overview-edit").addEventListener(
+        "click",
+        () => openProjectEditModal(currentProject)
+    );
+
+    projectGrid.appendChild(
+        overview
+    );
+
+    if (todoistData.length > 0) {
+        projectGrid.appendChild(todoPanel);
+    }
 
 
     /*
@@ -3001,34 +3221,11 @@ async function renderProjectItems() {
         );
 
 
-        projectElement.addEventListener(
-            "click",
-            event => {
 
-                /*
-                    If the pencil was clicked,
-                    do not open the project.
-                */
-
-                if (
-                    event.target.closest(
-                        ".project-edit-icon"
-                    )
-                ) {
-
-                    return;
-
-                }
+        projectElement.addEventListener("click", event => { /* If the pencil was clicked, do not open the project. */ if (event.target.closest(".project-edit-icon")) { return; } openProject(project); });
 
 
-                openProject(
-                    project
-                );
-
-            }
-        );
-
-
+        
         projectGrid.appendChild(
             projectElement
         );
@@ -3598,11 +3795,114 @@ async function createProject() {
 function openSettings() {
 
     renderSources();
+    loadTodoistApiKey();
 
 
     settingsModal.classList.add(
         "open"
     );
+
+}
+
+
+async function loadTodoistTasks(sectionUrl, apiKey) {
+
+    const sectionSlug =
+        new URL(sectionUrl).pathname.split("/").filter(Boolean).pop();
+
+    const sectionId =
+        sectionSlug.match(/-([A-Za-z0-9]+)$/)?.[1] || sectionSlug;
+
+    if (!sectionId) {
+        throw new Error("Todoist section URL has no section ID");
+    }
+
+    const response = await fetch(
+        `https://api.todoist.com/api/v1/tasks?section_id=${encodeURIComponent(sectionId)}`,
+        {
+            headers: {
+                Authorization: `Bearer ${apiKey}`
+            }
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Todoist request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return Array.isArray(data.results) ? data.results : [];
+
+}
+
+
+settingsNavItems.forEach(item => {
+
+    item.addEventListener("click", () => {
+
+        const page = item.dataset.page;
+
+        settingsNavItems.forEach(navItem => navItem.classList.toggle("active", navItem === item));
+        settingsPages.forEach(settingsPage => settingsPage.classList.toggle("active", settingsPage.id === `${page}Page`));
+        settingsPageTitle.textContent = page === "todoist" ? "Todoist integration" : "Sources";
+
+    });
+
+});
+
+
+todoistApiKeyInput.addEventListener("focus", () => {
+
+    if (todoistApiKeyInput.dataset.masked === "true") {
+        todoistApiKeyInput.value = "";
+        todoistApiKeyInput.dataset.masked = "false";
+    }
+
+});
+
+
+saveTodoistApiKeyButton.addEventListener("click", saveTodoistApiKey);
+
+
+function maskTodoistApiKey(key) {
+
+    if (key.length <= 6) {
+        return "*".repeat(key.length);
+    }
+
+    return `${key.slice(0, 3)}${"*".repeat(key.length - 6)}${key.slice(-3)}`;
+
+}
+
+
+function loadTodoistApiKey() {
+
+    const key = localStorage.getItem(TODOIST_API_KEY_STORAGE_KEY) || "";
+
+    todoistApiKeyInput.value = key ? maskTodoistApiKey(key) : "";
+    todoistApiKeyInput.dataset.masked = key ? "true" : "false";
+    todoistApiKeyStatus.textContent = key
+        ? "A key is saved locally. Click the field to replace it."
+        : "No key saved yet.";
+
+}
+
+
+function saveTodoistApiKey() {
+
+    const key = todoistApiKeyInput.dataset.masked === "true"
+        ? localStorage.getItem(TODOIST_API_KEY_STORAGE_KEY) || ""
+        : todoistApiKeyInput.value.trim();
+
+    if (!key) {
+        localStorage.removeItem(TODOIST_API_KEY_STORAGE_KEY);
+        loadTodoistApiKey();
+        return;
+    }
+
+    localStorage.setItem(TODOIST_API_KEY_STORAGE_KEY, key);
+    loadTodoistApiKey();
 
 }
 
@@ -4104,11 +4404,6 @@ function setProjectView(
 
 
 
-/* =========================================================
-   HELPERS
-========================================================= */
-
-
 async function sourceAlreadyExists(
     handle
 ) {
@@ -4384,6 +4679,16 @@ function populateProjectSources() {
 /* =========================================================
    EVENTS
 ========================================================= */
+
+
+
+
+
+
+
+
+
+
 
 
 

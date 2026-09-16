@@ -193,6 +193,28 @@
 
             </div>
 
+            <div class="project-edit-field">
+
+                <label for="projectEditDescription">
+                    Description
+                </label>
+
+                <textarea id="projectEditDescription" class="create-input project-edit-textarea"
+                    placeholder="No description added yet"></textarea>
+
+            </div>
+
+            <div class="project-edit-field">
+
+                <label for="projectEditTodoistData">
+                    Todoist data
+                </label>
+
+                <textarea id="projectEditTodoistData" class="create-input project-edit-textarea"
+                    placeholder="One list item per line"></textarea>
+
+            </div>
+
 
             <label class="project-edit-checkbox">
 
@@ -554,12 +576,18 @@
 
                 <nav class="settings-nav">
 
-                    <button class="
+                        <button class="
                             settings-nav-item
                             active
                         " data-page="sources">
 
                         Sources
+
+                    </button>
+
+                    <button class="settings-nav-item" data-page="todoist">
+
+                        Todoist integration
 
                     </button>
 
@@ -671,6 +699,39 @@
                         <i class="ph ph-upload-simple"></i>
                         Import Sources
                     </button>
+
+                </div>
+
+
+                <!-- Todoist integration -->
+
+                <div class="settings-page" id="todoistPage">
+
+                    <section class="settings-section">
+
+                        <h3>Todoist API key</h3>
+
+                        <p class="settings-section-description">
+                            Add your Todoist API key to enable future integrations.
+                            It is stored locally on this device and is not used yet.
+                        </p>
+
+                        <label class="settings-label" for="todoistApiKey">
+                            API key
+                        </label>
+
+                        <div class="settings-key-field">
+                            <input id="todoistApiKey" class="create-input" type="text"
+                                placeholder="Paste your Todoist API key" autocomplete="off"
+                                spellcheck="false">
+                            <button class="settings-save" id="saveTodoistApiKey" type="button">
+                                Save key
+                            </button>
+                        </div>
+
+                        <p class="settings-description" id="todoistApiKeyStatus"></p>
+
+                    </section>
 
                 </div>
 
