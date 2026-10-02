@@ -537,6 +537,11 @@
 
                 <!-- Projects are inserted here -->
 
+                <div class="project-search" id="projectSearchContainer" hidden>
+                    <input class="create-input" id="projectSearch" type="text" placeholder="Search projects"
+                        aria-label="Search projects">
+                </div>
+
                 <div id="projectGrid" hidden></div>
 
 
@@ -587,9 +592,14 @@
 
                 <nav class="settings-nav">
 
+                    <button class="settings-nav-item active" data-page="general">
+
+                        General
+
+                    </button>
+
                     <button class="
                             settings-nav-item
-                            active
                         " data-page="sources">
 
                         Sources
@@ -618,14 +628,14 @@
 
                         <h2 id="settingsPageTitle">
 
-                            Sources
+                            General
 
                         </h2>
 
 
                         <p id="settingsPageDesc">
 
-                            Choose where your projects live.
+                            Manage general preferences.
 
                         </p>
 
@@ -641,12 +651,30 @@
                 </header>
 
 
+                <!-- General -->
+
+                <div class="settings-page active" id="generalPage">
+
+                    <section class="settings-section">
+
+                        <h3>General</h3>
+
+                        <label class="settings-row" for="showProjectSearch">
+                            <span class="settings-row-copy">
+                                <span class="settings-label">Project search bar</span>
+                                <span class="settings-description">Show a search field above the project list.</span>
+                            </span>
+                            <input class="settings-checkbox" id="showProjectSearch" type="checkbox">
+                        </label>
+
+                    </section>
+
+                </div>
+
+
                 <!-- Sources -->
 
-                <div class="
-                        settings-page
-                        active
-                    " id="sourcesPage">
+                <div class="settings-page" id="sourcesPage">
 
                     <section class="settings-section">
 

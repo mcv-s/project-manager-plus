@@ -280,6 +280,28 @@ body {
     border-bottom: 1px solid var(--border)
 }
 
+.settings-row-copy {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-checkbox {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    accent-color: var(--accent);
+}
+
+.project-search {
+    margin-bottom: 10px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.project-search[hidden] {
+    display: none;
+}
+
 .settings-label {
     color: var(--text);
     font-size: 14px

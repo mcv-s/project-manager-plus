@@ -11,6 +11,9 @@ const statusText = document.getElementById("statusText");
 const projectCount = document.getElementById("projectCount");
 const welcome = document.getElementById("welcome");
 const projectGrid = document.getElementById("projectGrid");
+const projectSearchContainer = document.getElementById("projectSearchContainer");
+const projectSearchInput = document.getElementById("projectSearch");
+const showProjectSearchCheckbox = document.getElementById("showProjectSearch");
 const viewModeButton = document.getElementById("viewModeButton");
 
 
@@ -83,10 +86,14 @@ let directoryHistory = [];
 let createMode = null;
 
 const TODOIST_API_KEY_STORAGE_KEY = "todoistApiKey";
+const PROJECT_SEARCH_STORAGE_KEY = "showProjectSearch";
 const TODOIST_TASK_LIMIT_STORAGE_KEY = "todoistTaskLimit";
 const DEFAULT_TODOIST_TASK_LIMIT = 10;
 const TODOIST_SORT_ORDER_STORAGE_KEY = "todoistSortOrder";
 const DEFAULT_TODOIST_SORT_ORDER = ["priority", "date", "label"];
+
+let showProjectSearch = localStorage.getItem(PROJECT_SEARCH_STORAGE_KEY) !== "false";
+showProjectSearchCheckbox.checked = showProjectSearch;
 
 
 
@@ -192,6 +199,21 @@ hideFinishedProjectsCheckbox.addEventListener(
         renderProjectItems();
     }
 );
+
+showProjectSearchCheckbox.addEventListener("change", () => {
+    showProjectSearch = showProjectSearchCheckbox.checked;
+    localStorage.setItem(PROJECT_SEARCH_STORAGE_KEY, String(showProjectSearch));
+
+    if (!showProjectSearch) {
+        projectSearchInput.value = "";
+    }
+
+    renderProjects();
+});
+
+projectSearchInput.addEventListener("input", () => {
+    renderProjectItems();
+});
 
 
 
@@ -1741,6 +1763,8 @@ function renderSources() {
 function renderProjects() {
 
     projectGrid.innerHTML = "";
+    projectSearchContainer.hidden =
+        !showProjectSearch || projects.length === 0 || currentDirectory !== null;
 
 
     projectCount.textContent =
@@ -3107,10 +3131,15 @@ async function renderProjectItems() {
 
     const filteredProjects =
         projects.filter(
-            project =>
-                projectFilterSources.includes(
+            project => {
+                const matchesSource = projectFilterSources.includes(
                     project.sourceId
-                )
+                );
+                const query = showProjectSearch ? projectSearchInput.value.trim().toLowerCase() : "";
+                const matchesName = project.name.toLowerCase().includes(query);
+
+                return matchesSource && matchesName;
+            }
         );
 
 
@@ -4018,8 +4047,8 @@ settingsNavItems.forEach(item => {
 
         settingsNavItems.forEach(navItem => navItem.classList.toggle("active", navItem === item));
         settingsPages.forEach(settingsPage => settingsPage.classList.toggle("active", settingsPage.id === `${page}Page`));
-        settingsPageTitle.textContent = page === "todoist" ? "Todoist integration" : "Sources";
-        settingsPageDesc.textContent = page === "todoist" ? "Integrate to-do lists" : "Choose where your projects live";
+        settingsPageTitle.textContent = page === "todoist" ? "Todoist integration" : page === "sources" ? "Sources" : "General";
+        settingsPageDesc.textContent = page === "todoist" ? "Integrate to-do lists" : page === "sources" ? "Choose where your projects live" : "Manage general preferences";
 
     });
 
